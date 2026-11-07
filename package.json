@@ -1,0 +1,15 @@
+{
+  "name": "shop-planner",
+  "version": "11.0.0",
+  "private": true,
+  "description": "Interior planning sandbox for a dessert cafe: 3D, 2D plan and walk-through views in one self-contained page.",
+  "scripts": {
+    "start": "node tests/server.js",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "serve-handler": "6.1.6",
+    "three": "0.128.0"
+  }
+}
