@@ -3,21 +3,24 @@ const { test, expect } = require("@playwright/test");
 const fs = require("fs");
 const path = require("path");
 
-// Serve Three.js from the pinned npm copy so CI doesn't depend on CDN uptime.
-const VENDOR = {
-  "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js": "node_modules/three/build/three.min.js",
-  "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js":
-    "node_modules/three/examples/js/controls/OrbitControls.js",
-};
+// Three.js and the fonts are served from this repo (vendor/, fonts/), so tests need no network.
 
-test.beforeEach(async ({ page }) => {
-  for (const [url, file] of Object.entries(VENDOR)) {
-    await page.route(url, (route) =>
-      route.fulfill({ contentType: "application/javascript", body: fs.readFileSync(path.join(__dirname, "..", file)) })
-    );
+test("vendored Three.js matches the pinned npm package", async () => {
+  const root = path.join(__dirname, "..");
+  for (const [vendored, npm] of [
+    ["vendor/three/three.min.js", "node_modules/three/build/three.min.js"],
+    ["vendor/three/OrbitControls.js", "node_modules/three/examples/js/controls/OrbitControls.js"],
+  ]) {
+    expect(fs.readFileSync(path.join(root, vendored)).equals(fs.readFileSync(path.join(root, npm))), vendored).toBe(true);
   }
-  // Fonts are cosmetic; skip them so tests don't wait on the network.
-  await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort());
+});
+
+test("loads nothing from other sites", async ({ page }) => {
+  const external = [];
+  page.on("request", (r) => { if (!r.url().startsWith("http://localhost:4173/") && !r.url().startsWith("data:") && !r.url().startsWith("blob:")) external.push(r.url()); });
+  await page.goto("/");
+  await expect(page.locator("#stSeats")).toHaveText(/seats$/);
+  expect(external, external.join("\n")).toEqual([]);
 });
 
 test("loads, renders and switches views without errors", async ({ page }) => {
