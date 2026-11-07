@@ -19,7 +19,8 @@ module.exports = defineConfig({
   // Desktop engines plus phone emulation, matching the page's responsive layouts
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+    // Ask headless Firefox for software WebGL; if it still has none, the tests check the 2D fallback.
+    { name: "firefox", use: { ...devices["Desktop Firefox"], launchOptions: { firefoxUserPrefs: { "webgl.force-enabled": true } } } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
     { name: "mobile-chrome", use: { ...devices["Pixel 7"] } },
     { name: "mobile-safari", use: { ...devices["iPhone 14"] } },

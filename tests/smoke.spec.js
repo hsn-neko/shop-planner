@@ -29,14 +29,22 @@ test("loads, renders and switches views without errors", async ({ page }) => {
 
   // The default "Cosy dine-in" preset counts its seats once the scene is built.
   await expect(page.locator("#stSeats")).toHaveText(/^[1-9]\d* seats$/);
-  await expect(page.locator(".stage canvas").first()).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-webgl", /^(on|off)$/);
+  const has3d = (await page.locator("html").getAttribute("data-webgl")) === "on";
 
   await page.locator("#vPlan").click();
   await expect(page.locator("#vPlan")).toHaveAttribute("aria-pressed", "true");
-  await page.locator("#vWalk").click();
-  await expect(page.locator("#walkpad")).toBeVisible();
-  await page.locator("#v3d").click();
-  await expect(page.locator("#v3d")).toHaveAttribute("aria-pressed", "true");
+  if (has3d) {
+    await expect(page.locator(".stage canvas").first()).toBeAttached();
+    await page.locator("#vWalk").click();
+    await expect(page.locator("#walkpad")).toBeVisible();
+    await page.locator("#v3d").click();
+    await expect(page.locator("#v3d")).toHaveAttribute("aria-pressed", "true");
+  } else {
+    // Headless browsers without graphics may have no WebGL: the planner must still work in 2D.
+    await expect(page.locator("#v3d")).toBeDisabled();
+    await expect(page.locator("#vWalk")).toBeDisabled();
+  }
 
   expect(errors, errors.join("\n")).toEqual([]);
 });
@@ -55,4 +63,23 @@ test("adding furniture is saved across reloads", async ({ page }) => {
   await page.waitForTimeout(400); // saves are debounced by 250 ms
   await page.reload();
   await expect.poll(async () => placed(await page.locator("#invSum").textContent())).toBe(placed(before) + 1);
+});
+
+test("opens in the 2D plan when the browser has no WebGL", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  // Make every WebGL request fail, as on browsers with 3D turned off.
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+      return /webgl/i.test(type) ? null : getContext.call(this, type, ...rest);
+    };
+  });
+  await page.goto("/");
+  await expect(page.locator("#stSeats")).toHaveText(/^[1-9]\d* seats$/);
+  await expect(page.locator("html")).toHaveAttribute("data-webgl", "off");
+  await expect(page.locator("#vPlan")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#v3d")).toBeDisabled();
+  await expect(page.locator("#vWalk")).toBeDisabled();
+  expect(errors, errors.join("\n")).toEqual([]);
 });
