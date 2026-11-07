@@ -20,7 +20,8 @@
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;overflow:hidden;-webkit-tap-highlight-color:transparent}
 button{font-family:var(--body)}
-.app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+.app{height:100%;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+.top{min-width:0}
 .top{display:flex;align-items:center;gap:10px;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:var(--panel)}
 .brand{font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin-right:auto;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .top .stats,.top .gear{flex:none}
@@ -39,6 +40,8 @@ button{font-family:var(--body)}
 .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:3px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
 .seg button{border:0;background:transparent;color:var(--fg);min-height:38px;padding:0 11px;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.no3d{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted);font-size:13px;line-height:1.5}
 .icon{min-width:44px;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font-weight:600;font-size:13px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.08);padding:0 10px}
 .icon:disabled{opacity:.4;cursor:default}
 .icon.strong{background:var(--fg);color:var(--bg);border-color:var(--fg)}
@@ -492,7 +495,12 @@ function undo(){let u=undoStack.pop();while(u&&!store.order.includes(u.slot))u=u
 
 /* ---------- Three.js setup ---------- */
 const stage=$("#stage");
-const renderer=new THREE.WebGLRenderer({antialias:true});
+// Some browsers (WebGL turned off, old devices, machines without graphics) can't draw 3D.
+// A stand-in keeps the planner working in the 2D plan instead of stopping at startup.
+let HAS3D=true;
+function makeRenderer(){try{return new THREE.WebGLRenderer({antialias:true})}catch(e){HAS3D=false;
+  return{domElement:document.createElement("canvas"),shadowMap:{},outputEncoding:0,setPixelRatio(){},setSize(){},render(){}}}}
+const renderer=makeRenderer();
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputEncoding=THREE.sRGBEncoding;
@@ -937,7 +945,7 @@ let yaw=0,pitch=-0.05;const keys=new Set();
 function fitView(){if(mode==="plan"){fitPlan();return}
   const b=GEO.bbox,w=b.x1-b.x0,d=b.z1-b.z0,cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;const s=Math.max(w,d),k=camera.aspect<0.8?1.6:1;
   camera.position.set(cx+s*0.7*k,s*1.0*k,cz+s*1.15*k);controls.target.set(cx,0,cz);controls.update()}
-function setMode(m){
+function setMode(m){if(!HAS3D)m="plan";
   const prev=mode;mode=m;[["3d","v3d"],["plan","vPlan"],["walk","vWalk"]].forEach(([k,id])=>$("#"+id).setAttribute("aria-pressed",k===m));
   $("#walkpad").hidden=m!=="walk";$("#bFit").hidden=m==="walk";updateEmpty();pc.hidden=m!=="plan";cv.style.visibility=m==="plan"?"hidden":"visible";
   if(m==="walk"){controls.enabled=false;selected=null;showSel();evaluate();
@@ -1045,7 +1053,7 @@ function bindSwatches(el,onPick){el.querySelectorAll("[data-c]").forEach(b=>b.on
 
 /* ---------- Item studio: separate 3D workshop for custom pieces ---------- */
 const sView=$("#sView");
-const sRenderer=new THREE.WebGLRenderer({antialias:true});sRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const sRenderer=makeRenderer();sRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
 sRenderer.shadowMap.enabled=true;sRenderer.outputEncoding=THREE.sRGBEncoding;sView.prepend(sRenderer.domElement);
 const sScene=new THREE.Scene(),sCam=new THREE.PerspectiveCamera(40,1,0.05,100);sCam.position.set(2.6,2.2,3.2);
 sScene.add(new THREE.HemisphereLight(0xffffff,0x8a7b70,0.75));
@@ -1440,7 +1448,7 @@ $("#bRoomEd").onclick=openRoomEd;$("#reDone").onclick=closeRoomEd;$("#reFit").on
 addEventListener("keydown",e=>{if(roomEdOpen&&e.key==="Escape")closeRoomEd()});
 /* ---------- Room editor 3D: drag window edges to resize, middle to slide ---------- */
 let reMode="2d",re3Drag=null,re3Hover=null,re3H=[],re3Down=null;
-const re3=new THREE.WebGLRenderer({antialias:true});re3.setPixelRatio(Math.min(devicePixelRatio,2));
+const re3=makeRenderer();re3.setPixelRatio(Math.min(devicePixelRatio,2));
 re3.shadowMap.enabled=true;re3.shadowMap.type=THREE.PCFSoftShadowMap;re3.outputEncoding=THREE.sRGBEncoding;
 const re3cv=re3.domElement;re3cv.className="re3";re3cv.hidden=true;re3cv.setAttribute("aria-label","3D view of walls and windows");reView.appendChild(re3cv);
 const reOv=document.createElement("canvas");reOv.className="reov";reOv.hidden=true;reView.appendChild(reOv);const ovc=reOv.getContext("2d");
@@ -1520,6 +1528,11 @@ $("#sReset").onclick=()=>{store.settings.win=Object.assign({},DEF_WIN);applySett
 $("#bSettings").onclick=openSettings;$("#wLimits").onclick=openSettings;$("#setClose").onclick=closeSettings;$("#setScrim").onclick=closeSettings;
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#settings").hidden){e.stopImmediatePropagation();closeSettings()}},true);
 readTokens();renderCatalog();setTab(isDesk()?"room":null);loadSlot(store.active);resize();setMode("3d");frame();
+document.documentElement.dataset.webgl=HAS3D?"on":"off";
+if(!HAS3D){const why="3D needs WebGL, which this browser has turned off";
+  ["#v3d","#vWalk",'#reSeg [data-v="3d"]'].forEach(q=>{const b=$(q);b.disabled=true;b.title=why});
+  const n=document.createElement("div");n.className="no3d";n.textContent="The 3D preview needs WebGL, which this browser has turned off. Your item still saves and shows on the 2D plan.";$("#sView").appendChild(n);
+  setTimeout(()=>flashHint("3D isn't available in this browser, so the planner opened in the 2D plan.",9000),700)}
 setTimeout(()=>tip("intro","Drag furniture to move it. Drag the floor to look around, pinch to zoom."),600);
 })();
 </script>
