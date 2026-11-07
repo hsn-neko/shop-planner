@@ -1,6 +1,6 @@
 # Dessert Cafe Planner
 
-An interior planning sandbox for a dessert cafe. `index.html` is the whole app: one self-contained page that loads Three.js r128 from cdnjs and jsDelivr. It runs in any modern browser on phone, tablet and desktop.
+An interior planning sandbox for a dessert cafe. `index.html` is the whole app. It loads only files from this repo: a pinned copy of Three.js r128 in `vendor/three/` (MIT licence) and the Bricolage Grotesque and Figtree fonts in `fonts/` (SIL Open Font License), so visitors make no requests to other sites. It runs in any modern browser on phone, tablet and desktop.
 
 **Live:** https://hsn-neko.github.io/shop-planner/ (deployed from `main`)
 
@@ -31,8 +31,10 @@ npx playwright test --project=chromium
 ## CI/CD
 `.github/workflows/ci.yml` runs on every push and pull request:
 
-1. **Test**: Playwright smoke tests in Chromium, Firefox and WebKit (Safari's engine), plus Pixel 7 and iPhone 14 phone emulation. They check that the page loads with no script errors, the 3D, 2D plan and walk views switch, placed furniture survives a reload, and the page falls back to the 2D plan when WebGL is unavailable. Headless Firefox is asked for software WebGL; where it has none, the view test checks the 2D fallback instead. Three.js is served from the pinned npm package during tests so CDN outages don't fail the build.
-2. **Deploy**: when every browser passes on `main`, `index.html` is published to GitHub Pages.
+1. **Test**: Playwright smoke tests in Chromium, Firefox and WebKit (Safari's engine), plus Pixel 7 and iPhone 14 phone emulation. They check that the page loads with no script errors, the 3D, 2D plan and walk views switch, placed furniture survives a reload, and the page falls back to the 2D plan when WebGL is unavailable. Headless Firefox is asked for software WebGL; where it has none, the view test checks the 2D fallback instead. Tests also check that the bundled Three.js matches the pinned npm package and that the page loads nothing from other sites.
+2. **Deploy**: when every browser passes on `main`, `index.html`, `vendor/` and `fonts/` are published to GitHub Pages.
+
+Workflow actions are pinned to exact commits, with the version in a comment beside each.
 
 One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions.**
 
