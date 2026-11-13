@@ -1041,6 +1041,7 @@ function initSettings(): void {
     app.store.settings.win = { ...DEF_WIN };
     applySettings();
   };
+  for (const b of $$<HTMLButtonElement>("[data-sjump]")) b.onclick = () => $("#" + b.dataset.sjump).scrollIntoView({ behavior: "smooth", block: "start" });
   $("#sNameAdd").onclick = addName;
   $in("#sNameNew").addEventListener("keydown", (e) => {
     if (e.key === "Enter") addName();

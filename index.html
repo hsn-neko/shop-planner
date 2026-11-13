@@ -183,14 +183,15 @@
 <div class="mscrim" id="setScrim" hidden></div>
 <section class="modal" id="settings" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
   <header><h2 id="setTitle">Settings</h2><button class="close" id="setClose">Close</button></header>
+  <nav class="setnav" aria-label="Settings sections"><button data-sjump="setWin">Window limits</button><button data-sjump="setNames">Back-room names</button></nav>
   <div class="mbody">
-    <div class="label">Window limits</div>
+    <div class="label" id="setWin">Window limits</div>
     <p class="note">These apply to every layout in this browser. Dragging and sliders stay inside them.</p>
     <div class="ngrid"><label for="sSillMin">Lowest sill</label><div class="num"><input type="number" id="sSillMin" step="0.05" min="0" max="2.5" inputmode="decimal"><span>m</span></div><label for="sSillMax">Highest sill</label><div class="num"><input type="number" id="sSillMax" step="0.05" min="0" max="3" inputmode="decimal"><span>m</span></div><label for="sMinH">Smallest window height</label><div class="num"><input type="number" id="sMinH" step="0.05" min="0" max="2" inputmode="decimal"><span>m</span></div><label for="sGap">Gap below ceiling</label><div class="num"><input type="number" id="sGap" step="0.05" min="0" max="1" inputmode="decimal"><span>m</span></div><label for="sWMin">Narrowest window</label><div class="num"><input type="number" id="sWMin" step="0.05" min="0" max="3" inputmode="decimal"><span>m</span></div><label for="sWMax">Widest window</label><div class="num"><input type="number" id="sWMax" step="0.05" min="0" max="10" inputmode="decimal"><span>m</span></div></div>
     <div class="label">Snap step while dragging</div>
     <div class="chooser" id="sStep"><button data-v="0.01">1 cm</button><button data-v="0.05">5 cm</button><button data-v="0.1">10 cm</button></div>
     <div class="actions" style="margin-top:16px"><button class="btn" id="sReset">Restore window defaults</button></div>
-    <div class="label" style="margin-top:22px">Back-room names</div>
+    <div class="label" style="margin-top:22px" id="setNames">Back-room names</div>
     <p class="note">Pick these for any layout's back rooms in the room editor. Kitchen, Storage, Stockroom, Staff room, Office and Workroom are always there; add your own below. Removing a name only takes it off this list: layouts already using it keep it.</p>
     <div class="names" id="sNames"></div>
     <div class="vsave"><label for="sNameNew" hidden>New back-room name</label><input type="text" id="sNameNew" maxlength="24" placeholder="e.g. Wrapping room"><button class="btn" id="sNameAdd">Add name</button></div>
