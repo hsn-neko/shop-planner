@@ -1,6 +1,10 @@
 // Shared data shapes for Shop Planner. All sizes are in metres; x runs left→right, z back→front.
 
 export type FloorKind = "terrazzo" | "checker" | "wood";
+/** The kind of shop a layout plans. Chosen when the layout is created and fixed after that. */
+export type ShopType = "cafe" | "retail" | "books";
+/** What the header counts: seats, display fixtures or metres of shelving. */
+export type CountKey = "seats" | "fixtures" | "shelving";
 export interface Palette {
   name: string;
   note: string;
@@ -12,6 +16,8 @@ export interface Palette {
   accent: string;
   wood: string;
   up: string;
+  /** the shop type this palette was made for; it's listed first for that type */
+  kind: ShopType;
 }
 
 export type Zone = "kitchen" | "storage";
@@ -56,6 +62,12 @@ export interface ItemDef {
   /** offset of the parts' centre from the footprint centre */
   ox?: number;
   oz?: number;
+  /** the shop type whose catalogue this piece belongs to; shared pieces have none */
+  kind?: ShopType;
+  /** counts as this many display fixtures */
+  fix?: number;
+  /** shelving faces: metres of shelving = faces × width */
+  shelf?: number;
 }
 
 /** A piece placed in a layout. */
@@ -115,8 +127,17 @@ export interface WindowDef {
   head?: number;
 }
 
+/** Names of the two back rooms ("kitchen" and "storage" slots), when changed from the shop type's defaults. */
+export interface BackNames {
+  kitchen?: string;
+  storage?: string;
+}
+
 export interface Layout {
   label?: string;
+  /** missing on layouts saved before shop types: those are cafes */
+  type?: ShopType;
+  names?: BackNames;
   room: Room;
   palette: string;
   warmth: number;
@@ -131,6 +152,8 @@ export interface Version {
   time: number;
   count: number;
   seats: number;
+  /** count summary for the layout's type, e.g. "18 m shelving · 6 seats" */
+  sum?: string;
   data: string;
 }
 
@@ -150,11 +173,16 @@ export interface Store {
   order: string[];
   custom: ItemDef[];
   seen: Record<string, boolean>;
-  settings: { win: WinLimits };
+  settings: {
+    win: WinLimits;
+    /** back-room names added in Settings, offered next to the built-in ones */
+    roomNames: string[];
+  };
   versions: Record<string, Version[]>;
 }
 
 /* ---------- Geometry ---------- */
+/** Internal room ids: "cafe" is the shop floor; "kitchen" and "storage" are the first and second back rooms, whatever they're called. */
 export type RoomId = "cafe" | "kitchen" | "storage";
 export type Axis = "x" | "z";
 

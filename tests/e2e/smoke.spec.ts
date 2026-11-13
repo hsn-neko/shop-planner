@@ -24,7 +24,7 @@ test("loads nothing from other sites", async ({ page }) => {
     if (!u.startsWith(ORIGIN) && !u.startsWith("data:") && !u.startsWith("blob:")) external.push(u);
   });
   await page.goto("/");
-  await expect(page.locator("#stSeats")).toHaveText(/seats$/);
+  await expect(page.locator("#stCount")).toHaveText(/seats$/);
   expect(external, external.join("\n")).toEqual([]);
 });
 
@@ -35,7 +35,7 @@ test("loads, renders and switches views without errors", async ({ page }) => {
   await expect(page.locator(".brand")).toContainText("Shop Planner");
 
   // The default preset counts its seats once the scene is built.
-  await expect(page.locator("#stSeats")).toHaveText(/^[1-9]\d* seats$/);
+  await expect(page.locator("#stCount")).toHaveText(/^[1-9]\d* seats$/);
   await expect(page.locator("html")).toHaveAttribute("data-webgl", /^(on|off)$/);
   const has3d = (await page.locator("html").getAttribute("data-webgl")) === "on";
 
@@ -57,7 +57,7 @@ test("loads, renders and switches views without errors", async ({ page }) => {
 
 test("adding furniture is saved across reloads", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("#stSeats")).toHaveText(/seats$/);
+  await expect(page.locator("#stCount")).toHaveText(/seats$/);
   const before = placed(await page.locator("#invSum").textContent());
 
   // On phones the inventory is a drawer behind the Items button.
@@ -73,7 +73,7 @@ test("adding furniture is saved across reloads", async ({ page }) => {
 test("room editor adds, edits and removes a window, and undo works", async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto("/");
-  await expect(page.locator("#stSeats")).toHaveText(/seats$/);
+  await expect(page.locator("#stCount")).toHaveText(/seats$/);
   await openRoomEditor(page);
 
   const windows = async () => Number(/(\d+) windows?/.exec((await page.locator("#rsArea").textContent()) ?? "")?.[1] ?? 0);
@@ -108,7 +108,7 @@ test("room editor adds, edits and removes a window, and undo works", async ({ pa
 test("room editor size sliders resize the shop", async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto("/");
-  await expect(page.locator("#stSeats")).toHaveText(/seats$/);
+  await expect(page.locator("#stCount")).toHaveText(/seats$/);
   await openRoomEditor(page);
   const w = page.locator("#rW");
   await w.fill("12");
@@ -130,10 +130,70 @@ test("opens in the 2D plan when the browser has no WebGL", async ({ page }) => {
     } as typeof getContext;
   });
   await page.goto("/");
-  await expect(page.locator("#stSeats")).toHaveText(/^[1-9]\d* seats$/);
+  await expect(page.locator("#stCount")).toHaveText(/^[1-9]\d* seats$/);
   await expect(page.locator("html")).toHaveAttribute("data-webgl", "off");
   await expect(page.locator("#vPlan")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#v3d")).toBeDisabled();
   await expect(page.locator("#vWalk")).toBeDisabled();
+  expect(errors, errors.join("\n")).toEqual([]);
+});
+
+async function openTab(page: Page, tab: string): Promise<void> {
+  const t = page.locator(`[data-tab="${tab}"]`);
+  if ((await t.getAttribute("aria-selected")) !== "true") await t.click();
+}
+
+test("new layouts start by picking a shop type", async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto("/");
+  await expect(page.locator("#stCount")).toHaveText(/seats$/);
+  await openTab(page, "layouts");
+
+  await page.locator('[data-stype="books"]').click();
+  await expect(page.locator('#starts [data-new]')).toHaveCount(3);
+  await page.locator('[data-new="K1"]').click();
+  await expect(page.locator("#stCount")).toHaveText(/^[\d.]+ m shelving$/);
+  await openTab(page, "layouts");
+  await expect(page.locator("#lType")).toHaveText("Bookshop / gift shop · Stockroom and Office");
+  await expect(page.locator("#slots [aria-pressed=true]")).toContainText("Bookshop / gift shop");
+
+  // a blank retail layout opens the room editor
+  await page.locator('[data-stype="retail"]').click();
+  await page.locator('[data-new="blank"]').click();
+  await expect(page.locator("#roomEd")).toBeVisible();
+  await page.locator("#reDone").click();
+  await expect(page.locator("#stCount")).toHaveText("0 fixtures");
+  expect(errors, errors.join("\n")).toEqual([]);
+});
+
+test("back rooms can take a name added in Settings", async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto("/");
+  await expect(page.locator("#stCount")).toHaveText(/seats$/);
+  await page.locator("#bSettings").click();
+  // on touch screens no field is focused on open, so the keypad doesn't cover the settings
+  const touch = await page.evaluate(() => !matchMedia("(pointer: fine)").matches);
+  if (touch) await expect(page.locator("#setClose")).toBeFocused();
+  else await expect(page.locator("#sSillMin")).toBeFocused();
+  await page.locator("#sNameNew").fill("Bakehouse");
+  await page.locator("#sNameAdd").click();
+  await expect(page.locator("#sNames")).toContainText("Bakehouse");
+  await page.locator("#setClose").click();
+
+  await openRoomEditor(page);
+  await page.locator("#bName1").selectOption("Bakehouse");
+  await expect(page.locator("#rsArea")).toContainText("Bakehouse");
+  await expect(page.locator('#bMode [data-v="kitchen"]')).toHaveText("Bakehouse");
+  await page.locator("#reDone").click();
+
+  // Settings shows where the name is used; removing it keeps it on the layout
+  await page.locator("#bSettings").click();
+  await expect(page.locator("#sNames")).toContainText("used in 1 layout");
+  await page.getByRole("button", { name: /^Remove Bakehouse/ }).click();
+  await expect(page.locator("#sNames")).not.toContainText("Bakehouse");
+  await page.locator("#setClose").click();
+  await openRoomEditor(page);
+  await expect(page.locator("#rsArea")).toContainText("Bakehouse");
+  await page.locator("#reDone").click();
   expect(errors, errors.join("\n")).toEqual([]);
 });

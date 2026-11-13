@@ -1,5 +1,6 @@
 // Room controls in the room editor's side panel: size, shape, kitchen/storage, lighting warmth.
-import { $, $$, $in, fmt } from "../dom";
+import { $, $$, $in, esc, fmt } from "../dom";
+import { roomName, roomNameChoices, SHOP_TYPES, typeOf } from "../data/shopTypes";
 import { cafeCuts, defaultBoh, shapeOf } from "../geometry/rooms";
 import { evaluate } from "../items";
 import { fitPlan } from "../plan/plan";
@@ -68,6 +69,28 @@ export function syncBoh(): void {
   $in("#bHatch").checked = B.hatch;
   $in("#bStoreDoor").checked = B.storeDoor;
   $in("#bBackDoor").checked = B.backDoor;
+  syncNames();
+}
+
+/** Labels that name the back rooms follow this layout's names. */
+function syncNames(): void {
+  const L = app.L, n1 = roomName(L, "kitchen"), n2 = roomName(L, "storage"), lo = (t: string) => t.toLowerCase();
+  const [none, one, two] = $$("#bMode button");
+  none!.textContent = "None";
+  one!.textContent = n1;
+  two!.textContent = `${n1} + ${lo(n2)}`;
+  $("#tShare").textContent = `${n1} size`;
+  $("#tDoor").textContent = `${n1} door`;
+  $("#tHatch").textContent = SHOP_TYPES[typeOf(L)].hatch;
+  $("#tStoreDoor").textContent = `Shop door to ${lo(n2)}`;
+  $("#bSwap").textContent = `Swap ${lo(n1)} and ${lo(n2)}`;
+  const opts = roomNameChoices(app.store.settings.roomNames);
+  for (const [id, cur] of [["#bName1", n1], ["#bName2", n2]] as const) {
+    const sel = $<HTMLSelectElement>(id), list = opts.includes(cur) ? opts : [cur, ...opts];
+    sel.innerHTML = list.map((o) => `<option${o === cur ? " selected" : ""}>${esc(o)}</option>`).join("");
+  }
+  const both = (L.boh?.mode ?? "none") === "both";
+  $("#bName2").hidden = $("#bName2L").hidden = !both;
 }
 
 export function syncRoomInputs(): void {
@@ -146,6 +169,21 @@ export function initRoomControls(): void {
     el.addEventListener("change", () => bohChange((B) => (B[k] = el.checked)));
   }
   $("#bSwap").onclick = () => bohChange((B) => (B.swap = !B.swap));
+  // back-room names: the type's default is stored as "no rename"
+  for (const [id, k, d] of [["#bName1", "kitchen", 0], ["#bName2", "storage", 1]] as const) {
+    const sel = $<HTMLSelectElement>(id);
+    sel.addEventListener("change", () => {
+      pushUndo();
+      const names = (app.L.names ??= {});
+      if (sel.value === SHOP_TYPES[typeOf(app.L)].back[d]) delete names[k];
+      else names[k] = sel.value;
+      if (!names.kitchen && !names.storage) delete app.L.names;
+      syncBoh();
+      buildRoom();
+      evaluate();
+      save();
+    });
+  }
   for (const [id, k] of [["#bDepth", "depth"], ["#bShare", "share"], ["#bDoor", "door"]] as const)
     slider($in(id), (v) => {
       (app.L.boh ??= defaultBoh())[k] = v;
