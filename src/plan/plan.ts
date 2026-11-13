@@ -285,7 +285,7 @@ export function drawPlan(T: PlanTarget): void {
       }
       c.stroke();
       const [lx, ly] = off(wl.pos === "cafe" ? 1 : -1, t / 2 + (wl.ax === "z" ? 24 : 9));
-      label(c, "Hatch", lx, ly, 10.5, 600, TK.muted);
+      label(c, o.label ?? "Hatch", lx, ly, 10.5, 600, TK.muted);
     } else if (o.kind === "entrance") {
       const R = (o.w / 2) * s;
       swingArc(ax, ay, R, aAlong, nAng(-wl.nrm));

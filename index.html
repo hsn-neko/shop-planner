@@ -11,9 +11,9 @@
 
 <div class="app">
   <header class="top">
-    <div class="brand">Shop Planner<small>Interior sandbox · v12</small></div>
+    <div class="brand">Shop Planner<small>Interior sandbox · v13</small></div>
     <div class="stats" aria-live="polite">
-      <span class="chip seats" id="stSeats">0 seats</span>
+      <span class="chip seats" id="stCount">0 seats</span>
       <span class="chip" id="stSize">8 × 10 m</span>
       <button class="chip" id="stClash" type="button">No clashes</button>
     </div>
@@ -73,7 +73,7 @@
       <div class="pane" data-pane="room" hidden>
         <div class="rsum"><svg viewBox="0 0 24 24" id="rsIcon" aria-hidden="true"></svg><div style="min-width:0"><b id="rsTitle"></b><small id="rsArea"></small></div></div>
         <button class="btn primary" id="bRoomEd" style="width:100%;margin-top:12px">Edit room shape and size</button>
-        <p class="note">Walls, entrance, kitchen and storage are set in the room editor, where you drag the walls directly. Keeping them there means walls can't move by accident while you arrange furniture.</p>
+        <p class="note">Walls, entrance and back rooms are set in the room editor, where you drag the walls directly. Keeping them there means walls can't move by accident while you arrange furniture.</p>
       </div>
       <div class="pane" data-pane="style" hidden>
         <div class="label">Finish palette</div>
@@ -83,20 +83,17 @@
       </div>
       <div class="pane" data-pane="layouts" hidden>
         <div class="label">Start a new layout</div>
-        <div class="starts">
-          <button data-new="blank" class="blank"><b>Blank room</b><small>Empty 8 × 10 m shop to build from scratch</small></button>
-          <button data-new="A"><b>Cosy dine-in</b><small data-pinfo="A"></small></button>
-          <button data-new="B"><b>Grab-and-go</b><small data-pinfo="B"></small></button>
-        </div>
+        <div class="starts" id="starts"></div>
         <div class="label" style="margin-top:18px">Current layout</div>
         <div class="field"><label for="lName" class="label" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px">Name</label><input type="text" id="lName" maxlength="40"></div>
+        <p class="note" id="lType" style="margin:6px 0 0"></p>
         <div class="actions" style="margin-top:8px">
           <button class="btn" id="bClear">Clear furniture</button>
           <button class="btn danger" id="bDelLayout">Delete layout</button>
         </div>
         <p class="note" id="confirmMsg" hidden style="color:var(--warn)">Tap again to confirm.</p>
         <div class="label" style="margin-top:18px">Saved versions of this layout</div>
-        <div class="vsave"><label for="vName" hidden>Version name</label><input type="text" id="vName" placeholder="e.g. More booths" maxlength="40"><button class="btn primary" id="bSaveV">Save version</button></div>
+        <div class="vsave"><label for="vName" hidden>Version name</label><input type="text" id="vName" placeholder="e.g. Wider aisles" maxlength="40"><button class="btn primary" id="bSaveV">Save version</button></div>
         <div id="vList"></div>
         <div class="label" style="margin-top:18px">Your layouts</div>
         <div class="slots" id="slots"></div>
@@ -163,15 +160,19 @@
         <div class="row"><label for="rH">Ceiling</label><input type="range" id="rH" min="2.6" max="4.5" step="0.1"><output id="oH"></output></div>
         <div class="row"><label for="rDoor">Entrance</label><input type="range" id="rDoor" min="-1" max="1" step="0.02"><output id="oDoor"></output></div>
         <p class="note">The entrance sits on the street-facing wall, at the bottom of the 2D plan. Furniture left outside the rooms after a resize is marked as a clash.</p>
-        <div class="label" style="margin-top:18px">Kitchen and storage</div>
+        <div class="label" style="margin-top:18px">Back rooms</div>
         <div class="chooser" id="bMode"><button data-v="none">None</button><button data-v="kitchen">Kitchen</button><button data-v="both">Kitchen + storage</button></div>
         <div id="bohOpts">
           <div class="label" style="margin-top:12px">Attach to</div>
           <div class="chooser" id="bSide"><button data-v="back">Back wall</button><button data-v="left">Left wall</button><button data-v="right">Right wall</button></div>
+          <div class="names2">
+            <label for="bName1">First room</label><select id="bName1"></select>
+            <label for="bName2" id="bName2L">Second room</label><select id="bName2"></select>
+          </div>
           <div class="row" style="margin-top:6px"><label for="bDepth">Depth</label><input type="range" id="bDepth" min="1.5" max="8" step="0.1"><output id="obDepth"></output></div>
-          <div class="row" id="bShareRow"><label for="bShare">Kitchen size</label><input type="range" id="bShare" min="0.2" max="0.8" step="0.01"><output id="obShare"></output></div>
-          <div class="row"><label for="bDoor">Kitchen door</label><input type="range" id="bDoor" min="-1" max="1" step="0.02"><output id="obDoor"></output></div>
-          <div class="checks"><label><input type="checkbox" id="bHatch"> Serving hatch</label><label id="bStoreDoorL"><input type="checkbox" id="bStoreDoor"> Cafe door to storage</label><label><input type="checkbox" id="bBackDoor"> Delivery door</label></div>
+          <div class="row" id="bShareRow"><label for="bShare" id="tShare">Kitchen size</label><input type="range" id="bShare" min="0.2" max="0.8" step="0.01"><output id="obShare"></output></div>
+          <div class="row"><label for="bDoor" id="tDoor">Kitchen door</label><input type="range" id="bDoor" min="-1" max="1" step="0.02"><output id="obDoor"></output></div>
+          <div class="checks"><label><input type="checkbox" id="bHatch"> <span id="tHatch">Serving hatch</span></label><label id="bStoreDoorL"><input type="checkbox" id="bStoreDoor"> <span id="tStoreDoor">Shop door to storage</span></label><label><input type="checkbox" id="bBackDoor"> Delivery door</label></div>
           <button class="btn" id="bSwap" style="margin-top:10px">Swap kitchen and storage</button>
         </div>
         <p class="note" id="bArea"></p>
@@ -188,7 +189,11 @@
     <div class="ngrid"><label for="sSillMin">Lowest sill</label><div class="num"><input type="number" id="sSillMin" step="0.05" min="0" max="2.5" inputmode="decimal"><span>m</span></div><label for="sSillMax">Highest sill</label><div class="num"><input type="number" id="sSillMax" step="0.05" min="0" max="3" inputmode="decimal"><span>m</span></div><label for="sMinH">Smallest window height</label><div class="num"><input type="number" id="sMinH" step="0.05" min="0" max="2" inputmode="decimal"><span>m</span></div><label for="sGap">Gap below ceiling</label><div class="num"><input type="number" id="sGap" step="0.05" min="0" max="1" inputmode="decimal"><span>m</span></div><label for="sWMin">Narrowest window</label><div class="num"><input type="number" id="sWMin" step="0.05" min="0" max="3" inputmode="decimal"><span>m</span></div><label for="sWMax">Widest window</label><div class="num"><input type="number" id="sWMax" step="0.05" min="0" max="10" inputmode="decimal"><span>m</span></div></div>
     <div class="label">Snap step while dragging</div>
     <div class="chooser" id="sStep"><button data-v="0.01">1 cm</button><button data-v="0.05">5 cm</button><button data-v="0.1">10 cm</button></div>
-    <div class="actions" style="margin-top:16px"><button class="btn" id="sReset">Restore defaults</button></div>
+    <div class="actions" style="margin-top:16px"><button class="btn" id="sReset">Restore window defaults</button></div>
+    <div class="label" style="margin-top:22px">Back-room names</div>
+    <p class="note">Pick these for any layout's back rooms in the room editor. Kitchen, Storage, Stockroom, Staff room, Office and Workroom are always there; add your own below.</p>
+    <div class="names" id="sNames"></div>
+    <div class="vsave"><label for="sNameNew" hidden>New back-room name</label><input type="text" id="sNameNew" maxlength="24" placeholder="e.g. Wrapping room"><button class="btn" id="sNameAdd">Add name</button></div>
   </div>
 </section>
 

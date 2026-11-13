@@ -2,6 +2,7 @@
 import { PALETTES } from "../data/catalog";
 import { WT } from "../geometry/rooms";
 import type { Geo, Layout, Palette, RoomId, Wall } from "../types";
+import { roomName } from "../data/shopTypes";
 import { backRoomTexture, box, cyl, floorTexture, M, roomG, scene, sun, THREE } from "./core";
 
 /** Each wall has a full-height version and a cut-down one for the dollhouse view. */
@@ -80,7 +81,7 @@ export function buildRoomMeshes(geo: Geo, L: Layout): void {
   slab.position.set((b.x0 + b.x1) / 2, -0.004, (b.z0 + b.z1) / 2);
   slab.receiveShadow = true;
   roomG.add(slab);
-  const base: Record<RoomId, THREE.CanvasTexture> = { cafe: floorTexture(p), kitchen: backRoomTexture("kitchen"), storage: backRoomTexture("storage") };
+  const base: Record<RoomId, THREE.CanvasTexture> = { cafe: floorTexture(p), kitchen: backTex(L, "kitchen"), storage: backTex(L, "storage") };
   for (const r of geo.cells) {
     const rw = r.x1 - r.x0, rd = r.z1 - r.z0, k = TILE[r.id], tex = base[r.id].clone();
     tex.needsUpdate = true;
@@ -119,4 +120,9 @@ export function buildRoomMeshes(geo: Geo, L: Layout): void {
   if (!sun.target.parent) scene.add(sun.target);
   Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext });
   sun.shadow.camera.updateProjectionMatrix();
+}
+
+/** Kitchens get tiles; every other back room gets plain concrete. */
+function backTex(L: Layout, id: "kitchen" | "storage"): THREE.CanvasTexture {
+  return backRoomTexture(roomName(L, id) === "Kitchen" ? "kitchen" : "storage");
 }

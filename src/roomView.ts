@@ -5,12 +5,14 @@ import { evaluate } from "./items";
 import { app, refreshGeo } from "./state";
 import { buildRoomMeshes, rebuildWallMeshes } from "./three/room";
 import { updateRoomSummary } from "./editor/roomEditor";
+import { updateTypeNote } from "./ui/layouts";
 
 function updateRoomText(): void {
   const { w, d } = app.L.room, sh = shapeOf(app.L.room).shape;
   $("#stSize").textContent = `${fmt(w)} × ${fmt(d)} m${sh !== "rect" ? ` · ${sh}` : ""}`;
   $("#bArea").textContent = app.geo.rooms.map((r) => `${r.name} ${Math.round(r.area)} m²`).join(" · ");
   updateRoomSummary();
+  updateTypeNote();
 }
 
 /** Full rebuild: floors, walls, windows, lights. */
