@@ -1005,11 +1005,26 @@ function openSettings(): void {
   syncSettings();
   $("#settings").hidden = false;
   $("#setScrim").hidden = false;
-  $("#sSillMin").focus();
+  // focusing a field on a touch screen pops up the keypad over the settings, so focus Close there instead
+  if (matchMedia("(pointer: fine)").matches) $("#sSillMin").focus();
+  else $("#setClose").focus();
+  fitToKeyboard();
 }
 function closeSettings(): void {
   $("#settings").hidden = true;
   $("#setScrim").hidden = true;
+}
+
+/** While a phone keyboard is up, keep the settings box inside the part of the screen still visible, with the field being typed in showing. */
+function fitToKeyboard(): void {
+  const vv = window.visualViewport, m = $("#settings");
+  if (!vv || m.hidden) return;
+  const kb = innerHeight - vv.height > 120;
+  m.classList.toggle("kb", kb);
+  m.style.setProperty("--vvt", `${vv.offsetTop}px`);
+  m.style.setProperty("--vvh", `${vv.height}px`);
+  const f = document.activeElement;
+  if (kb && f instanceof HTMLInputElement && m.contains(f)) f.scrollIntoView({ block: "center" });
 }
 function applySettings(): void {
   const S = WS();
@@ -1047,6 +1062,9 @@ function initSettings(): void {
     if (e.key === "Enter") addName();
   });
   $("#bSettings").onclick = openSettings;
+  window.visualViewport?.addEventListener("resize", fitToKeyboard);
+  window.visualViewport?.addEventListener("scroll", fitToKeyboard);
+  $("#settings").addEventListener("focusin", () => setTimeout(fitToKeyboard, 300));
   $("#wLimits").onclick = openSettings;
   $("#setClose").onclick = closeSettings;
   $("#setScrim").onclick = closeSettings;

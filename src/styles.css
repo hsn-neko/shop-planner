@@ -231,3 +231,4 @@ input[type=text]{width:100%;min-height:44px;border:1px solid var(--line);backgro
 .setnav button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:7px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;min-height:34px}
 .setnav button:hover{border-color:var(--accent)}
 .modal .label[id]{scroll-margin-top:100px}
+.modal.kb{top:calc(var(--vvt) + 8px);transform:translateX(-50%);max-height:calc(var(--vvh) - 16px)}

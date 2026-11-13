@@ -171,6 +171,10 @@ test("back rooms can take a name added in Settings", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#stCount")).toHaveText(/seats$/);
   await page.locator("#bSettings").click();
+  // on touch screens no field is focused on open, so the keypad doesn't cover the settings
+  const touch = await page.evaluate(() => !matchMedia("(pointer: fine)").matches);
+  if (touch) await expect(page.locator("#setClose")).toBeFocused();
+  else await expect(page.locator("#sSillMin")).toBeFocused();
   await page.locator("#sNameNew").fill("Bakehouse");
   await page.locator("#sNameAdd").click();
   await expect(page.locator("#sNames")).toContainText("Bakehouse");
