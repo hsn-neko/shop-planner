@@ -181,5 +181,15 @@ test("back rooms can take a name added in Settings", async ({ page }) => {
   await expect(page.locator("#rsArea")).toContainText("Bakehouse");
   await expect(page.locator('#bMode [data-v="kitchen"]')).toHaveText("Bakehouse");
   await page.locator("#reDone").click();
+
+  // Settings shows where the name is used; removing it keeps it on the layout
+  await page.locator("#bSettings").click();
+  await expect(page.locator("#sNames")).toContainText("used in 1 layout");
+  await page.getByRole("button", { name: /^Remove Bakehouse/ }).click();
+  await expect(page.locator("#sNames")).not.toContainText("Bakehouse");
+  await page.locator("#setClose").click();
+  await openRoomEditor(page);
+  await expect(page.locator("#rsArea")).toContainText("Bakehouse");
+  await page.locator("#reDone").click();
   expect(errors, errors.join("\n")).toEqual([]);
 });

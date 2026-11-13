@@ -969,11 +969,19 @@ function syncSettings(): void {
   renderNames();
 }
 
+/** How many saved layouts name a back room this. */
+function nameUses(n: string): number {
+  return Object.values(app.store.slots).filter((L) => L.names?.kitchen === n || L.names?.storage === n).length;
+}
+
 /** Back-room names added by the user. Built-in names are always offered and aren't listed here. */
 function renderNames(): void {
   const list = app.store.settings.roomNames, el = $("#sNames");
   el.innerHTML = list.length
-    ? list.map((n, k) => `<span class="nchip">${esc(n)}<button data-nrm="${k}" aria-label="Remove ${esc(n)}">✕</button></span>`).join("")
+    ? list.map((n, k) => {
+        const u = nameUses(n), used = u ? `<small>used in ${u} layout${u > 1 ? "s" : ""}</small>` : "";
+        return `<span class="nchip">${esc(n)}${used}<button data-nrm="${k}" aria-label="Remove ${esc(n)}${u ? `, used in ${u} layout${u > 1 ? "s" : ""}` : ""}">✕</button></span>`;
+      }).join("")
     : `<p class="note" style="margin:0">No names added yet.</p>`;
   for (const b of $$<HTMLButtonElement>("[data-nrm]", el)) b.onclick = () => {
     // layouts already using the name keep it; it just stops being offered
