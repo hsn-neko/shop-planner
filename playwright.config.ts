@@ -1,20 +1,23 @@
-// @ts-check
-const { defineConfig, devices } = require("@playwright/test");
+import { defineConfig, devices } from "@playwright/test";
 
-module.exports = defineConfig({
-  testDir: "tests",
+const CI = !!process.env.CI;
+
+export default defineConfig({
+  testDir: "tests/e2e",
   timeout: 60_000,
-  retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
+  retries: CI ? 1 : 0,
+  reporter: CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: "http://localhost:4173",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
+  // Tests run against the production build, served the way GitHub Pages serves it.
   webServer: {
-    command: "node tests/server.js",
+    command: "npm run build && npm run preview",
     url: "http://localhost:4173",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !CI,
+    timeout: 120_000,
   },
   // Desktop engines plus phone emulation, matching the page's responsive layouts
   projects: [
