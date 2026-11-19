@@ -1,6 +1,6 @@
 // Room controls in the room editor's side panel: size, shape, kitchen/storage, lighting warmth.
 import { $, $$, $in, esc, fmt } from "../dom";
-import { roomName, roomNameChoices, SHOP_TYPES, typeOf } from "../data/shopTypes";
+import { hatchName, roomName, roomNameChoices, SHOP_TYPES, typeOf } from "../data/shopTypes";
 import { cafeCuts, defaultBoh, shapeOf } from "../geometry/rooms";
 import { evaluate } from "../items";
 import { fitPlan } from "../plan/plan";
@@ -81,7 +81,7 @@ function syncNames(): void {
   two!.textContent = `${n1} + ${lo(n2)}`;
   $("#tShare").textContent = `${n1} size`;
   $("#tDoor").textContent = `${n1} door`;
-  $("#tHatch").textContent = SHOP_TYPES[typeOf(L)].hatch;
+  $("#tHatch").textContent = hatchName(L);
   $("#tStoreDoor").textContent = `Shop door to ${lo(n2)}`;
   $("#bSwap").textContent = `Swap ${lo(n1)} and ${lo(n2)}`;
   const opts = roomNameChoices(app.store.settings.roomNames);

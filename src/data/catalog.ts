@@ -175,6 +175,47 @@ export const EXAMPLES: Record<string, Layout> = {
     boh: { mode: "kitchen", side: "left", depth: 2.5, share: 0.6, swap: false, door: 0.4, hatch: false, storeDoor: false, backDoor: true },
     windows: [{ x: -1.5, z: 4.5, w: 1.8, kind: "shopfront" }, { x: 2.0, z: 4.5, w: 1.4, kind: "shopfront" }],
   },
+  /* mixed shops */
+  M1: {
+    label: "Book café", type: "mixed", room: { w: 9, d: 12, h: 3.2, door: 0 }, palette: "scandi", warmth: 0.6,
+    items: [
+      it("espresso", -2.4, -5.62), it("counter", -2.4, -4.3), it("display", -0.3, -4.3),
+      it("four", 2.6, -4.4), it("four", 2.6, -2.2), it("sofa", -3.7, -1.6, 90), it("two", -1.6, -1.6), it("two", 0.4, -1.6), it("plant", 4.1, -0.2),
+      it("bookcase", -4.32, 1.4, 90), it("bookcase", -4.32, 2.4, 90), it("bookcase", -4.32, 3.4, 90),
+      it("bookcase", 4.32, 1.4, -90), it("bookcase", 4.32, 2.4, -90), it("bookcase", 4.32, 3.4, -90),
+      it("dblshelf", -2.0, 2.4, 90), it("dblshelf", 2.0, 2.4, 90), it("booktable", 0, 2.6), it("armchair", -2.0, 4.3),
+      it("cashctr", 2.8, 5.2), it("bookspin", -2.8, 5.1), it("plant", -4.1, 5.6),
+      it("deckoven", -3.7, -8.55), it("sink", -1.6, -8.75), it("prep", -1.8, -7.3), it("kfridge", -0.1, -8.2, -90),
+      it("dshelf", 4.15, -7.0, -90), it("dshelf", 4.15, -8.3, -90), it("bins", 1.3, -8.8),
+    ],
+    boh: { mode: "both", side: "back", depth: 3, share: 0.55, swap: false, door: -0.9, hatch: true, storeDoor: false, backDoor: true },
+    names: { storage: "Stockroom" },
+    areas: [
+      { id: "m1cafe", name: "Café", kind: "cafe", finish: "hexagon", x0: -4.5, x1: 4.5, z0: -6, z1: 0.5 },
+      { id: "m1books", name: "Books", kind: "books", finish: "herringbone", x0: -4.5, x1: 4.5, z0: 0.5, z1: 6, div: { n: { kind: "bookcase", gap: 0 } } },
+    ],
+    windows: [{ x: -2.6, z: 6, w: 2.2, kind: "shopfront" }, { x: 2.6, z: 6, w: 2.2, kind: "shopfront" }],
+  },
+  M2: {
+    label: "Concept store", type: "mixed", room: { w: 10, d: 9, h: 3.4, door: 0 }, palette: "concrete", warmth: 0.5,
+    items: [
+      it("wallbay", -4.77, -2.5, 90), it("wallbay", -4.77, -1.5, 90), it("wallbay", -4.77, -0.5, 90), it("wallbay", -4.77, 0.5, 90), it("wallbay", -4.77, 1.5, 90),
+      it("rail2", -2.5, -1.0, 90), it("rail2", -0.6, -1.0, 90), it("nest", -2.0, 2.2), it("accspin", 0.4, 1.0),
+      it("fitting", -3.6, -3.9), it("fitting", -2.3, -3.9), it("mirror", -1.1, -4.35),
+      it("mannequin", -1.5, 3.6), it("mannequin", -0.9, 3.6), it("cashdesk", -3.4, 3.8),
+      it("espresso", 4.67, -2.0, -90), it("counter", 3.3, -2.0, -90), it("fridge", 2.2, -4.17),
+      it("two", 2.6, 0.6), it("two", 4.3, 1.2, 90), it("ledge", 3.3, 4.15),
+      it("dshelf", -4.0, -6.8), it("dshelf", -2.6, -6.8), it("bins", -1.0, -6.8),
+      it("prep", 2.2, -6.75), it("sink", 4.25, -6.75),
+    ],
+    boh: { mode: "both", side: "back", depth: 2.5, share: 0.4, swap: true, door: 0.8, hatch: false, storeDoor: false, backDoor: true },
+    names: { storage: "Stockroom" },
+    areas: [
+      { id: "m2retail", name: "Boutique", kind: "retail", finish: "concrete", x0: -5, x1: 1.5, z0: -4.5, z1: 4.5, div: { e: { kind: "planter", gap: 0.6 } } },
+      { id: "m2cafe", name: "Coffee bar", kind: "cafe", finish: "terrazzo", x0: 1.5, x1: 5, z0: -4.5, z1: 4.5 },
+    ],
+    windows: [{ x: -2.8, z: 4.5, w: 2.4, kind: "shopfront" }, { x: 3.2, z: 4.5, w: 2.4, kind: "shopfront" }],
+  },
 };
 
 /* ---------- Windows ---------- */

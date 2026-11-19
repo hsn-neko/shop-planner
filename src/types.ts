@@ -2,7 +2,7 @@
 
 export type FloorKind = "terrazzo" | "checker" | "wood";
 /** The kind of shop a layout plans. Chosen when the layout is created and fixed after that. */
-export type ShopType = "cafe" | "retail" | "books";
+export type ShopType = "cafe" | "retail" | "books" | "mixed";
 /** What the header counts: seats, display fixtures or metres of shelving. */
 export type CountKey = "seats" | "fixtures" | "shelving";
 export interface Palette {
@@ -133,11 +133,45 @@ export interface BackNames {
   storage?: string;
 }
 
+/** What a floor area counts: seats, metres of shelving, display fixtures, or nothing. */
+export type AreaKind = "cafe" | "books" | "retail" | "general";
+export type DividerKind = "wall" | "planter" | "bookcase";
+/** Sides of an area: n = back (low z), s = front, w = left (low x), e = right. */
+export type Side = "n" | "s" | "w" | "e";
+export interface Divider {
+  kind: DividerKind;
+  /** where the 1.2 m opening sits along the side, -1..1 (start..end); null for no opening */
+  gap: number | null;
+}
+/** A rectangle of shop floor with a name, a kind, its own floor finish and optional low dividers. Rectangles that share a name count as one area. */
+export interface Area {
+  id: string;
+  name: string;
+  kind: AreaKind;
+  /** a FINISHES key, or "layout" to keep the layout's floor */
+  finish: string;
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+  div?: Partial<Record<Side, Divider>>;
+}
+/** A piece of low divider as it stands: a box on the floor. */
+export interface DividerRect extends BBox {
+  kind: DividerKind;
+  h: number;
+  /** "x" when it runs along x */
+  ax: "x" | "z";
+  area: string;
+  side: Side;
+}
+
 export interface Layout {
   label?: string;
   /** missing on layouts saved before shop types: those are cafes */
   type?: ShopType;
   names?: BackNames;
+  areas?: Area[];
   room: Room;
   palette: string;
   warmth: number;
@@ -270,4 +304,6 @@ export interface Geo {
   rectIn(x0: number, x1: number, z0: number, z1: number): RoomId | null;
   entrance: { x: number; z: number; W: Wall | null; o: Opening | null };
   windows: PlacedWindow[];
+  /** low dividers of floor areas, which block furniture and walking like walls */
+  dividers: DividerRect[];
 }

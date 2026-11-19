@@ -119,6 +119,128 @@ export function floorTexture(p: Palette): THREE.CanvasTexture {
   return canvasTexture(c);
 }
 
+/** Texture for a floor-area finish (see data/finishes.ts). */
+export function finishTexture(id: string): THREE.CanvasTexture {
+  const [c, x] = canvas2d(512);
+  let s = 11;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const speckle = (n: number, cols: string[], r0: number, r1: number) => {
+    for (let i = 0; i < n; i++) {
+      x.fillStyle = cols[i % cols.length]!;
+      x.beginPath();
+      const r = r0 + rnd() * (r1 - r0);
+      x.ellipse(rnd() * 512, rnd() * 512, r, r * (0.5 + rnd() * 0.5), rnd() * 3, 0, 7);
+      x.fill();
+    }
+  };
+  const boards = (a: string, b: string, rows: number) => {
+    const h = 512 / rows;
+    for (let r = 0; r < rows; r++) {
+      x.fillStyle = r % 2 ? b : a;
+      x.fillRect(0, r * h, 512, h);
+      x.fillStyle = "rgba(0,0,0,.16)";
+      x.fillRect(0, r * h, 512, 1.5);
+      const off = (r * 173) % 512;
+      x.fillRect(off, r * h, 1.5, h);
+      x.fillRect((off + 256) % 512, r * h, 1.5, h);
+    }
+  };
+  switch (id) {
+    case "terrazzo":
+      x.fillStyle = "#e7e1d7";
+      x.fillRect(0, 0, 512, 512);
+      speckle(900, ["#b7aa98", "#8e9a8a", "#d4b7a6", "#6d6a66"], 2, 8);
+      break;
+    case "checker": {
+      const n = 6, t = 512 / n;
+      x.fillStyle = "#f4f1ec";
+      x.fillRect(0, 0, 512, 512);
+      x.fillStyle = "#3a3a3a";
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if ((i + j) % 2) x.fillRect(i * t, j * t, t, t);
+      break;
+    }
+    case "hexagon": {
+      x.fillStyle = "#cfd9d5";
+      x.fillRect(0, 0, 512, 512);
+      const r = 512 / 8 / Math.sqrt(3), w = r * Math.sqrt(3), hh = r * 1.5;
+      x.strokeStyle = "#cfd9d5";
+      x.lineWidth = 3;
+      for (let row = -1; row * hh < 512 + r; row++)
+        for (let col = -1; col * w < 512 + w; col++) {
+          const cx = col * w + (row % 2 ? w / 2 : 0), cy = row * hh;
+          x.beginPath();
+          for (let k = 0; k < 6; k++) {
+            const a = Math.PI / 6 + (k * Math.PI) / 3;
+            x.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+          }
+          x.closePath();
+          x.fillStyle = (row * 7 + col * 3) % 11 === 0 ? "#9fbfb3" : "#eef3f1";
+          x.fill();
+          x.stroke();
+        }
+      break;
+    }
+    case "concrete":
+      x.fillStyle = "#b9b6b1";
+      x.fillRect(0, 0, 512, 512);
+      speckle(500, ["rgba(255,255,255,.08)", "rgba(0,0,0,.06)"], 10, 40);
+      speckle(600, ["rgba(0,0,0,.12)"], 0.6, 1.4);
+      break;
+    case "oak":
+      boards("#d9bf98", "#cfb38a", 8);
+      break;
+    case "walnut":
+      boards("#6e4c34", "#634330", 8);
+      break;
+    case "herringbone": {
+      // planks in a staircase: one along x, one along z, repeated so the pattern tiles seamlessly
+      x.fillStyle = "#8f6b45";
+      x.fillRect(0, 0, 512, 512);
+      const W = 32, cols = ["#c79f72", "#bd9466", "#d0aa7c", "#c49a6c"];
+      let n = 0;
+      for (let k = -20; k <= 20; k++)
+        for (let j = -12; j <= 12; j++) {
+          const ox = k * W + j * 2 * W, oy = k * W - j * 2 * W;
+          if (ox < -2 * W || ox > 512 || oy < -2 * W || oy > 512) continue;
+          x.fillStyle = cols[n++ % 4]!;
+          x.fillRect(ox + 1, oy + 1, 2 * W - 2, W - 2);
+          x.fillStyle = cols[n++ % 4]!;
+          x.fillRect(ox + 1, oy + W + 1, W - 2, 2 * W - 2);
+        }
+      break;
+    }
+    case "carpetgrey":
+    case "carpetgreen": {
+      const base = id === "carpetgrey" ? "#8e9196" : "#5f7a5e";
+      x.fillStyle = base;
+      x.fillRect(0, 0, 512, 512);
+      speckle(4000, ["rgba(255,255,255,.07)", "rgba(0,0,0,.08)"], 0.6, 1.6);
+      break;
+    }
+    case "rug": {
+      x.fillStyle = "#c98b6b";
+      x.fillRect(0, 0, 512, 512);
+      x.strokeStyle = "#f2e6cf";
+      x.lineWidth = 14;
+      x.strokeRect(28, 28, 456, 456);
+      x.strokeStyle = "#7a3f2e";
+      x.lineWidth = 6;
+      x.strokeRect(52, 52, 408, 408);
+      for (let i = 0; i < 4; i++) {
+        x.beginPath();
+        x.ellipse(256, 256, 120 - i * 28, 70 - i * 15, 0, 0, 7);
+        x.fillStyle = i % 2 ? "#e9c46a" : "#7a3f2e";
+        x.fill();
+      }
+      break;
+    }
+    default:
+      x.fillStyle = "#ccc";
+      x.fillRect(0, 0, 512, 512);
+  }
+  return canvasTexture(c);
+}
+
 /** Kitchen tiles or storage concrete. */
 export function backRoomTexture(kind: "kitchen" | "storage"): THREE.CanvasTexture {
   const [c, x] = canvas2d(256);

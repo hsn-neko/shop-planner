@@ -11,14 +11,15 @@ import { buildRoom, rebuildWalls } from "../roomView";
 import { app, pushUndo, refreshGeo, save, snap, snapW, undo, WS } from "../state";
 import { itemsG, makeRenderer, roomG, scene, setupRenderer, THREE } from "../three/core";
 import { walls } from "../three/room";
-import type { Boh, Layout, PlacedWindow, Placed, Room, RoomId, Wall, WindowDef, WindowKind, WinLimits } from "../types";
+import { areaHandles, areaSel, dragArea, drawAreaHandle, drawAreaSelection, initAreaPanel, renderAreaPanel, selectArea, startAreaDrag, type AreaDrag, type AreaHandle } from "./areaEditor";
+import type { Area, BBox, Boh, Layout, PlacedWindow, Placed, Room, RoomId, Side, Wall, WindowDef, WindowKind, WinLimits } from "../types";
 import { openInv } from "../ui/inventory";
 import { syncRoomInputs } from "../ui/roomControls";
 import { showSel } from "../ui/selection";
 import { applyLight, fitView, resetClock, setMode } from "../views";
 
 type EdMode = "2d" | "3d";
-type DragKind = "x" | "z" | "pt" | "win" | "wend" | "door";
+type DragKind = "x" | "z" | "pt" | "win" | "wend" | "door" | AreaDrag;
 interface Handle {
   id: string;
   x: number;
@@ -30,6 +31,10 @@ interface Handle {
   wid?: string;
   end?: number;
   W?: Wall;
+  /** floor-area handles */
+  aid?: string;
+  key?: keyof BBox;
+  side?: Side;
   tip: () => string;
 }
 interface DragState {
@@ -44,6 +49,8 @@ interface DragState {
   win0: { a0: number; b0: number } | null;
   wins: { wd: WindowDef; x: number; z: number; W: Wall | undefined }[];
   items: { i: Placed; x: number; z: number; rm: RoomId | null }[];
+  areas: { a: Area; x0: number; x1: number; z0: number; z1: number }[];
+  area: ReturnType<typeof startAreaDrag>;
 }
 
 let reView: HTMLElement, reCv: HTMLCanvasElement;
@@ -149,6 +156,7 @@ function roomHandles(): Handle[] {
       const al = sq.o.c + (end * sq.o.w) / 2;
       H.push({ id: "wend" + end, wid: sq.id, end, x: sq.W.ax === "x" ? al : sq.W.c, z: sq.W.ax === "x" ? sq.W.c : al, drag: "wend", W: sq.W, tip: () => `Width ${fmt(sq.o.w)} m` });
     }
+  H.push(...areaHandles());
   const E = G.entrance;
   if (E.o && E.W) H.push({ id: "ent", x: E.o.c, z: E.W.c, drag: "door", tip: () => "Entrance" });
   for (const W of G.walls)
@@ -181,7 +189,8 @@ function drawHandles(): void {
     const fill = h.dark ? TK.fg : TK.accent;
     c.lineWidth = 2;
     c.strokeStyle = TK.paper;
-    if (h.drag === "wend") {
+    if (h.aid) drawAreaHandle(c, h as AreaHandle, big);
+    else if (h.drag === "wend") {
       c.fillStyle = TK.accent;
       c.beginPath();
       c.arc(0, 0, big ? 8 : 6.5, 0, 7);
@@ -248,6 +257,7 @@ function drawHandles(): void {
 
 export function drawRoomEditor(): void {
   drawPlan(T2);
+  drawAreaSelection(T2);
   drawHandles();
 }
 
@@ -294,7 +304,9 @@ function resizeWindow(wd: WindowDef, W: Wall, end: number, wid: string, a0: numb
 
 function applyDrag(D: DragState, X: number, Z: number, p: [number, number]): void {
   const h = D.h, r = shapeOf(L().room), B = boh();
-  if (h.id === "wR" || h.id === "wL" || h.id === "dF" || h.id === "dB") {
+  if (h.aid) {
+    if (D.area) dragArea(D.area, X, Z);
+  } else if (h.id === "wR" || h.id === "wL" || h.id === "dF" || h.id === "dB") {
     const ax = h.drag as "x" | "z", s = h.s!, key = ax === "x" ? "w" : "d", v0 = D.room[key];
     // measured in screen distance: the view recentres while dragging, so world coordinates under the pointer shift
     const v = clampV(r1(v0 + (s * (ax === "x" ? p[0] - D.p0[0] : p[1] - D.p0[1])) / T2.V.s), 4, 20), dl = v - v0;
@@ -306,6 +318,17 @@ function applyDrag(D: DragState, X: number, Z: number, p: [number, number]): voi
       const sh = ((withEdge ? s : -s) * dl) / 2;
       if (ax === "x") o.i.x = o.x + sh;
       else o.i.z = o.z + sh;
+    }
+    // floor areas keep their distance to the wall that stays put
+    for (const o of D.areas) {
+      const sh = (-s * dl) / 2;
+      if (ax === "x") {
+        o.a.x0 = o.x0 + sh;
+        o.a.x1 = o.x1 + sh;
+      } else {
+        o.a.z0 = o.z0 + sh;
+        o.a.z1 = o.z1 + sh;
+      }
     }
     // kitchen/storage divider keeps its distance to the wall that stays put
     if (B.mode === "both" && ((B.side === "back" && ax === "x") || (B.side !== "back" && ax === "z"))) {
@@ -383,7 +406,8 @@ function applyDrag(D: DragState, X: number, Z: number, p: [number, number]): voi
 function hitHandle(p: [number, number]): Handle | null {
   let best: Handle | null = null, bd = 26;
   for (const h of handles) {
-    const [px, py] = w2s(T2, h.x, h.z), dd = Math.hypot(px - p[0], py - p[1]);
+    // the selected area's handles win over room handles they sit on (an area edge along a wall)
+    const [px, py] = w2s(T2, h.x, h.z), dd = Math.hypot(px - p[0], py - p[1]) - (h.aid && h.aid === areaSel() && h.drag !== "amove" ? 12 : 0);
     if (dd < bd) {
       bd = dd;
       best = h;
@@ -433,6 +457,11 @@ function init2dPointer(): void {
       if (h.wid) {
         reWinSel = h.wid;
         renderWinPanel();
+        if (areaSel()) selectArea(null);
+      }
+      if (h.aid && reWinSel) {
+        reWinSel = null;
+        renderWinPanel();
       }
       pushUndo();
       const G = app.geo, B = boh();
@@ -452,7 +481,13 @@ function init2dPointer(): void {
           const f = footprintOf(i);
           return { i, x: i.x, z: i.z, rm: G.rectIn(i.x - f.hw, i.x + f.hw, i.z - f.hd, i.z + f.hd) ?? G.cellAt(i.x, i.z) };
         }),
+        areas: (L().areas ?? []).map((a) => ({ a, x0: a.x0, x1: a.x1, z0: a.z0, z1: a.z1 })),
+        area: null,
       };
+      if (h.aid) {
+        const [X, Z] = s2w(T2, p[0], p[1]);
+        reDrag.area = startAreaDrag(h as AreaHandle, X, Z);
+      }
       reHover = h.id;
     } else {
       rePan = { p, cx: V.cx, cz: V.cz };
@@ -460,6 +495,7 @@ function init2dPointer(): void {
         reWinSel = null;
         renderWinPanel();
       }
+      if (areaSel()) selectArea(null);
     }
   });
   reCv.addEventListener("pointermove", (e) => {
@@ -486,7 +522,8 @@ function init2dPointer(): void {
     }
     const h = hitHandle(p);
     reHover = h ? h.id : null;
-    reCv.style.cursor = h ? (h.drag === "x" ? "ew-resize" : h.drag === "z" ? "ns-resize" : "grab") : "default";
+    const ew = h && (h.drag === "x" || (h.drag === "aedge" && h.key?.[0] === "x")), ns = h && (h.drag === "z" || (h.drag === "aedge" && h.key?.[0] === "z"));
+    reCv.style.cursor = h ? (ew ? "ew-resize" : ns ? "ns-resize" : "grab") : "default";
   });
   const up = (e: PointerEvent) => {
     rePtrs.delete(e.pointerId);
@@ -500,6 +537,7 @@ function init2dPointer(): void {
       settleWindows();
       evaluate();
       renderWinPanel();
+      renderAreaPanel();
       save();
     }
     rePan = null;
@@ -555,6 +593,7 @@ function reGeo(): void {
     updateRoomSummary();
   }
   renderWinPanel();
+  renderAreaPanel();
 }
 
 /** Wire a window slider so one drag is one undo step. */
@@ -762,7 +801,7 @@ function setReMode(m: EdMode, quiet = false): void {
   for (const b of $$("#reSeg button")) b.setAttribute("aria-pressed", String(b.dataset.v === m));
   reCv.hidden = m !== "2d";
   re3cv.hidden = reOv.hidden = m !== "3d";
-  $("#reBadge").textContent = m === "3d" ? "Drag a window's edges to resize it, or its middle to slide it" : "Drag the handles to resize walls and move doors";
+  $("#reBadge").textContent = m === "3d" ? "Drag a window's edges to resize it, or its middle to slide it" : "Drag the handles to resize walls, move doors and shape floor areas";
   reHover = null;
   re3Hover = null;
   if (m === "3d" && !quiet) {
@@ -930,6 +969,7 @@ function init3d(): void {
 export function openRoomEditor(): void {
   if (app.mode === "walk") setMode("3d");
   reWinSel = null;
+  selectArea(null);
   app.roomEdOpen = true;
   $("#roomEd").hidden = false;
   openInv(false);
@@ -1083,6 +1123,12 @@ export function initRoomEditor(): void {
   new ResizeObserver(reSize).observe(reView);
   init2dPointer();
   initWinPanel();
+  initAreaPanel(() => {
+    if (reMode === "3d") buildRoom();
+    else refreshGeo();
+    evaluate();
+    updateRoomSummary();
+  });
   init3d();
   $("#bRoomEd").onclick = openRoomEditor;
   $("#reDone").onclick = closeRoomEditor;
