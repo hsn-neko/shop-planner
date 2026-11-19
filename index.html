@@ -11,7 +11,7 @@
 
 <div class="app">
   <header class="top">
-    <div class="brand">Shop Planner<small>Interior sandbox · v13</small></div>
+    <div class="brand">Shop Planner<small>Interior sandbox · v14</small></div>
     <div class="stats" aria-live="polite">
       <span class="chip seats" id="stCount">0 seats</span>
       <span class="chip" id="stSize">8 × 10 m</span>
@@ -27,6 +27,7 @@
       <button class="close" id="bInvClose">Close</button>
     </div>
     <div class="invbody">
+      <div id="areaSum" class="areasum" hidden></div>
       <button class="btn primary" id="bMaker" style="width:100%">+ Create an item in the studio</button>
       <div id="catalog"></div>
       <p class="note" style="margin-top:12px">Tap + to place a piece in view. Tap the count to find each one already in your layout.</p>
@@ -140,6 +141,20 @@
           <button class="rm" id="wLimits" style="justify-self:start">Window limits in Settings</button>
         </div>
         <p class="note" id="wHelp" style="margin-bottom:14px">Tap a blue handle to edit a window. Drag it along any outside wall, or onto another wall.</p>
+        <div class="label" style="display:flex;justify-content:space-between;align-items:center">Floor areas<button class="btn" id="aAdd" style="min-height:36px">+ Add area</button></div>
+        <div class="achips" id="aChips"></div>
+        <div class="maker" id="aPanel" hidden>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b id="aTitle">Area</b><button class="btn danger" id="aDel" style="min-height:36px">Delete</button></div>
+          <div class="names2" style="margin-top:0"><label for="aName">Name</label><input type="text" id="aName" maxlength="30" list="aNameList" autocomplete="off"></div>
+          <datalist id="aNameList"></datalist>
+          <div class="chooser four" id="aKind" role="group" aria-label="Area kind"><button data-v="cafe">Café</button><button data-v="books">Books</button><button data-v="retail">Retail</button><button data-v="general">General</button></div>
+          <p class="note" id="aKindNote" style="margin:-4px 0 0"></p>
+          <div class="names2" style="margin-top:0"><label for="aFinish">Floor</label><select id="aFinish"></select></div>
+          <div class="label" style="margin:4px 0 0">Low dividers</div>
+          <div class="adivs" id="aDivs"></div>
+          <p class="note" id="aNote" style="margin:0"></p>
+        </div>
+        <p class="note" id="aHelp" style="margin-bottom:14px">Split the shop floor into areas, such as a café and a book corner, each with its own floor and counts. Drag an area's dark handle to move it and its edges to resize it.</p>
         <div class="label">Shop shape</div>
         <div class="shapes" id="rShape">
           <button data-v="rect"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/></svg>Rectangle</button>

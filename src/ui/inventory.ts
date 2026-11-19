@@ -2,8 +2,9 @@
 import { BY, CAT } from "../data/catalog";
 import { $, $$, esc, fmt, isWide } from "../dom";
 import { addItem, getSel, rebuildItems, select } from "../items";
-import { SHOP_TYPES, TYPE_ORDER, typeOf } from "../data/shopTypes";
-import { app, countsLabel, pushUndo, save } from "../state";
+import { KIND_ORDER, SHOP_TYPES, typeOf } from "../data/shopTypes";
+import { areaCountText, areaSummaries } from "../geometry/areas";
+import { app, cat, countsLabel, pushUndo, save } from "../state";
 import type { ItemDef, ShopType } from "../types";
 import { focusOn, setMode } from "../views";
 import { showSel } from "./selection";
@@ -36,12 +37,12 @@ function groups(list: ItemDef[]): string {
   return names.map((g) => `<div class="grp"><span>${g}</span><span data-gcount="${g}"></span></div>` + list.filter((c) => (c.grp ?? "") === g).map(row).join("")).join("");
 }
 
-/** Your items, then this layout's own type, then shared pieces; other types' pieces fold away below. */
+/** Your items, then this layout's own type, then shared pieces; other types' pieces fold away below. A mixed shop lists every type open. */
 export function renderCatalog(): void {
   const el = $("#catalog"), own = typeOf(app.L);
   const custom: ItemDef[] = app.store.custom.map((c) => ({ ...c, grp: OWN }));
-  const others = TYPE_ORDER.filter((t) => t !== own);
-  el.innerHTML = groups([...custom, ...CAT.filter((c) => c.kind === own), ...CAT.filter((c) => !c.kind)]) +
+  const mine = own === "mixed" ? KIND_ORDER : [own], others = KIND_ORDER.filter((t) => !mine.includes(t));
+  el.innerHTML = groups([...custom, ...mine.flatMap((t) => CAT.filter((c) => c.kind === t)), ...CAT.filter((c) => !c.kind)]) +
     others.map((t) => `<details class="fold" data-fold="${t}"${opened.has(t) ? " open" : ""}><summary>${SHOP_TYPES[t].name} pieces <small data-fcount="${t}"></small></summary>${groups(CAT.filter((c) => c.kind === t))}</details>`).join("");
   for (const d of $$<HTMLDetailsElement>("[data-fold]", el)) d.addEventListener("toggle", () => {
     const t = d.dataset.fold as ShopType;
@@ -111,6 +112,12 @@ export function updateCounts(): void {
     s.textContent = v ? `· ${v} placed` : "";
   }
   $("#invSum").textContent = `${app.L.items.length} pieces placed · ${countsLabel(app.L)}`;
+  const sums = areaSummaries(app.L, cat), el = $("#areaSum");
+  el.hidden = !sums.length;
+  el.innerHTML = sums.length ? `<b>Floor areas</b>` + sums.map((g) => {
+    const ct = areaCountText(g);
+    return `<div><span>${esc(g.name)}</span><span>${fmt(g.size)} m²${ct ? ` · ${ct}` : ""}</span></div>`;
+  }).join("") : "";
 }
 
 export function initInventory(): void {

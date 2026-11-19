@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BY, CAT, DEF_WIN, EXAMPLES, PALETTES } from "../../src/data/catalog";
-import { BUILTIN_ROOM_NAMES, countsOf, countText, roomName, roomNameChoices, SHOP_TYPES, TYPE_ORDER, typeOf } from "../../src/data/shopTypes";
+import { BUILTIN_ROOM_NAMES, KIND_ORDER, countsOf, countText, roomName, roomNameChoices, SHOP_TYPES, TYPE_ORDER, typeOf } from "../../src/data/shopTypes";
 import { computeGeo } from "../../src/geometry/rooms";
 import type { Layout, Placed, ShopType } from "../../src/types";
 
@@ -62,8 +62,9 @@ describe("catalogue and presets", () => {
     expect(CAT.filter((c) => c.kind === "books")).toHaveLength(11);
     expect(CAT.filter((c) => c.kind === "cafe")).toHaveLength(20);
   });
-  it("has four palettes per type", () => {
-    for (const t of TYPE_ORDER) expect(Object.values(PALETTES).filter((p) => p.kind === t)).toHaveLength(4);
+  it("has four palettes per type, and none of a mixed shop's own", () => {
+    expect(Object.values(PALETTES).filter((p) => p.kind === "mixed")).toHaveLength(0);
+    for (const t of KIND_ORDER) expect(Object.values(PALETTES).filter((p) => p.kind === t)).toHaveLength(4);
   });
   it.each(TYPE_ORDER)("%s presets are of that type and start on a palette that exists", (t) => {
     expect(PALETTES[SHOP_TYPES[t].palette]).toBeDefined();

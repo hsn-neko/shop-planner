@@ -232,3 +232,19 @@ input[type=text]{width:100%;min-height:44px;border:1px solid var(--line);backgro
 .setnav button:hover{border-color:var(--accent)}
 .modal .label[id]{scroll-margin-top:100px}
 .modal.kb{top:calc(var(--vvt) + 8px);transform:translateX(-50%);max-height:calc(var(--vvh) - 16px)}
+/* Floor areas */
+.chooser.four{grid-template-columns:repeat(4,1fr)}
+.names2 input[type=text]{width:100%;box-sizing:border-box;min-height:40px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:10px;padding:0 10px;font:inherit;font-weight:600;font-size:13px;min-width:0}
+.achips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.achips:empty{display:none}
+.achips button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;min-height:34px}
+.achips button[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft)}
+.adivs{display:grid;gap:8px}
+.adiv{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:13px}
+.adiv select{min-height:36px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:10px;padding:0 8px;font:inherit;font-size:12.5px;font-weight:600;min-width:0}
+.adiv label.op{display:flex;gap:5px;align-items:center;font-size:12.5px;white-space:nowrap}
+.adiv input[type=range]{grid-column:2/4}
+.areasum{display:grid;gap:4px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:12.5px}
+.areasum b{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.areasum div{display:flex;justify-content:space-between;gap:8px}
+.areasum span:last-child{color:var(--muted);text-align:right}

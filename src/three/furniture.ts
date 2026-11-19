@@ -35,7 +35,7 @@ function rng(seed: number): () => number {
 }
 const BOOK = ["#8f3b2f", "#23395b", "#c9a46a", "#5f7356", "#e3879a", "#f2e6cf", "#2f2f2f", "#6fb3b8", "#b5764f", "#7c8fd1"];
 /** A row of book spines from x0 to x1 on a shelf at height y, spines facing +z (or -z with face < 0). */
-function books(g: G, x0: number, x1: number, y: number, z: number, depth: number, hmax: number, seed: number): void {
+export function books(g: G, x0: number, x1: number, y: number, z: number, depth: number, hmax: number, seed: number): void {
   const r = rng(seed);
   for (let x = x0; x < x1 - 0.04; ) {
     const w = Math.min(x1 - x, 0.06 + r() * 0.14), h = hmax * (0.72 + r() * 0.28);
