@@ -1,5 +1,6 @@
 // App state shared by every module: the saved store, the open layout, its geometry and view state.
 import { BY, DEF_WIN, EXAMPLES } from "./data/catalog";
+import { countText } from "./data/shopTypes";
 import { clone } from "./dom";
 import { computeGeo } from "./geometry/rooms";
 import type { Geo, ItemDef, Layout, Store, WinLimits } from "./types";
@@ -26,14 +27,15 @@ function loadStore(): Store {
     saved = null;
   }
   const s: Store = {
-    active: "A", slots: {}, order: [], custom: [], seen: {}, versions: {}, settings: { win: { ...DEF_WIN } },
+    active: "A", slots: {}, order: [], custom: [], seen: {}, versions: {}, settings: { win: { ...DEF_WIN }, roomNames: [] },
     ...(saved && saved.slots ? saved : {}),
   } as Store;
   if (!Array.isArray(s.custom)) s.custom = [];
   if (!s.seen || typeof s.seen !== "object") s.seen = {};
   if (!s.versions || typeof s.versions !== "object") s.versions = {};
-  if (!s.settings || typeof s.settings !== "object") s.settings = { win: { ...DEF_WIN } };
+  if (!s.settings || typeof s.settings !== "object") s.settings = { win: { ...DEF_WIN }, roomNames: [] };
   s.settings.win = { ...DEF_WIN, ...(s.settings.win ?? {}) };
+  if (!Array.isArray(s.settings.roomNames)) s.settings.roomNames = [];
   if (!Array.isArray(s.order) || !s.order.length) s.order = Object.keys(s.slots).length ? Object.keys(s.slots) : ["A", "B", "C"];
   for (const k of s.order) {
     if (!s.slots[k]) s.slots[k] = clone(EXAMPLES[k as keyof typeof EXAMPLES] ?? EXAMPLES.C);
@@ -79,6 +81,8 @@ export function cat(t: string): ItemDef {
   return BY[t] ?? app.store.custom.find((c) => c.type === t) ?? { ...REMOVED, type: t };
 }
 export const seatsOf = (L: Layout): number => L.items.reduce((n, i) => n + (cat(i.type).seats || 0), 0);
+/** Header count for a layout's shop type, e.g. "22 seats" or "18 m shelving · 6 seats". */
+export const countsLabel = (L: Layout): string => countText(L, cat);
 
 let saveT: ReturnType<typeof setTimeout> | undefined;
 export function save(): void {

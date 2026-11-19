@@ -26,6 +26,38 @@ const WHITE = () => M(0xf1f1ef, { roughness: 0.6 });
 function legs(g: G, w: number, d: number, h: number, r = 0.025): void {
   for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) cyl(g, r, r, h, STEEL(), a * (w / 2 - 0.05), 0, b * (d / 2 - 0.05), 8);
 }
+const METAL = () => M(0x3a3330, { metalness: 0.5, roughness: 0.4 });
+const MIRROR = () => M(0xdfe8ec, { metalness: 0.9, roughness: 0.06 });
+/** Small seeded random numbers, so a model looks the same every time it's built. */
+function rng(seed: number): () => number {
+  let s = seed;
+  return () => (s = (s * 16807) % 2147483647) / 2147483647;
+}
+const BOOK = ["#8f3b2f", "#23395b", "#c9a46a", "#5f7356", "#e3879a", "#f2e6cf", "#2f2f2f", "#6fb3b8", "#b5764f", "#7c8fd1"];
+/** A row of book spines from x0 to x1 on a shelf at height y, spines facing +z (or -z with face < 0). */
+function books(g: G, x0: number, x1: number, y: number, z: number, depth: number, hmax: number, seed: number): void {
+  const r = rng(seed);
+  for (let x = x0; x < x1 - 0.04; ) {
+    const w = Math.min(x1 - x, 0.06 + r() * 0.14), h = hmax * (0.72 + r() * 0.28);
+    box(g, w - 0.006, h, depth, M(BOOK[Math.floor(r() * BOOK.length)]!), x + w / 2, y, z);
+    x += w + (r() < 0.15 ? 0.05 : 0);
+  }
+}
+/** Garments hanging from a bar: thin coloured blocks along x. */
+function garments(g: G, p: Palette, x0: number, x1: number, z: number, depth: number, seed: number): void {
+  const cols = [p.accent, p.up, "#e9e4dc", "#6d7d8f", p.wood, "#2f2f2f", "#c7b8ea"], r = rng(seed);
+  for (let x = x0; x <= x1 + 1e-6; x += 0.1) {
+    const h = 0.6 + r() * 0.35;
+    box(g, 0.05, h, depth, M(cols[Math.floor(r() * cols.length)]!), x, 1.5 - h, z);
+  }
+}
+/** A plain open shelf unit: sides, back and shelves in wood. */
+function shelves(g: G, w: number, d: number, h: number, levels: number[], mat: THREE.Material, back = true): void {
+  for (const sx of [-1, 1]) box(g, 0.03, h, d, mat, sx * (w / 2 - 0.015), 0, 0);
+  if (back) box(g, w, h, 0.02, mat, 0, 0, -d / 2 + 0.01);
+  for (const y of levels) box(g, w - 0.06, 0.03, d, mat, 0, y, 0);
+  box(g, w, 0.03, d, mat, 0, h - 0.03, 0);
+}
 
 export const BUILD: Record<string, Builder> = {
   display(g, p) {
@@ -171,6 +203,215 @@ export const BUILD: Record<string, Builder> = {
     box(g, 0.8, 1.85, 0.8, STEEL(), 0, 0, 0);
     box(g, 0.7, 0.12, 0.02, DARK(), 0, 1.65, 0.41);
     box(g, 0.04, 0.6, 0.04, DARK(), 0.3, 0.9, 0.42);
+  },
+  /* retail boutique */
+  rail(g, p) {
+    const m = METAL();
+    for (const x of [-0.58, 0.58]) {
+      box(g, 0.03, 1.6, 0.03, m, x, 0, 0);
+      box(g, 0.04, 0.03, 0.5, m, x, 0, 0);
+    }
+    box(g, 1.2, 0.03, 0.03, m, 0, 1.55, 0);
+    garments(g, p, -0.48, 0.48, 0, 0.4, 3);
+  },
+  rail2(g, p) {
+    const m = METAL();
+    for (const x of [-0.73, 0.73]) {
+      box(g, 0.03, 1.6, 0.03, m, x, 0, 0);
+      box(g, 0.04, 0.03, 0.6, m, x, 0, 0);
+      box(g, 0.03, 0.03, 0.34, m, x, 1.55, 0);
+    }
+    for (const z of [-0.16, 0.16]) {
+      box(g, 1.5, 0.03, 0.03, m, 0, 1.55, z);
+      garments(g, p, -0.62, 0.62, z, 0.26, z > 0 ? 5 : 9);
+    }
+  },
+  wallbay(g, p) {
+    const wd = M(p.wood);
+    shelves(g, 1.0, 0.45, 2.2, [0.1, 0.55, 1.0, 1.45, 1.9], wd);
+    const cols = [p.accent, p.up, "#e9e4dc", "#6d7d8f", "#2f2f2f"], r = rng(4);
+    for (const y of [0.13, 0.58, 1.03, 1.48])
+      for (const x of [-0.3, 0, 0.3]) {
+        const n = 2 + Math.floor(r() * 3);
+        box(g, 0.24, 0.06 * n, 0.3, M(cols[Math.floor(r() * cols.length)]!), x, y, 0.03);
+      }
+  },
+  nest(g, p) {
+    const wd = M(p.wood);
+    box(g, 1.1, 0.04, 0.9, wd, -0.25, 0.76, 0);
+    for (const [x, z] of [[-0.77, -0.42], [0.27, -0.42], [-0.77, 0.42], [0.27, 0.42]] as const) box(g, 0.04, 0.76, 0.04, wd, x, 0, z);
+    box(g, 0.75, 0.04, 0.7, wd, 0.42, 0.51, 0.08);
+    for (const [x, z] of [[0.08, -0.24], [0.76, -0.24], [0.08, 0.4], [0.76, 0.4]] as const) box(g, 0.035, 0.51, 0.035, wd, x, 0, z);
+    for (const [x, c] of [[-0.55, p.accent], [-0.15, "#e9e4dc"], [0.2, p.up]] as const) box(g, 0.3, 0.1, 0.35, M(c), x, 0.8, -0.1);
+    box(g, 0.32, 0.08, 0.3, M("#6d7d8f"), 0.5, 0.55, 0.1);
+  },
+  cabinet(g, p) {
+    box(g, 1.0, 0.4, 0.5, M(p.wood), 0, 0, 0);
+    box(g, 0.98, 1.36, 0.48, glass(0.22), 0, 0.4, 0);
+    box(g, 1.0, 0.04, 0.5, M(p.wood), 0, 1.76, 0);
+    for (const y of [0.85, 1.3]) box(g, 0.94, 0.012, 0.44, glass(0.4), 0, y, 0);
+    ["#c9a46a", p.accent, "#dfe8ec", p.up, "#2f2f2f", "#c9a46a"].forEach((c, k) => box(g, 0.12, 0.1, 0.12, M(c, { metalness: k % 2 ? 0 : 0.5, roughness: 0.3 }), -0.3 + (k % 3) * 0.3, k < 3 ? 0.42 : 0.87, 0));
+  },
+  shoes(g, p) {
+    const wd = M(p.wood);
+    box(g, 1.2, 0.33, 0.6, wd, 0, 0, 0);
+    box(g, 1.2, 0.33, 0.4, wd, 0, 0.33, -0.1);
+    box(g, 1.2, 0.34, 0.2, wd, 0, 0.66, -0.2);
+    const cols = [p.accent, "#2f2f2f", "#e9e4dc", "#8a5a44"];
+    for (const [y, z] of [[0.33, 0.2], [0.66, 0.0], [1.0, -0.2]] as const)
+      for (let k = 0; k < 3; k++) box(g, 0.1, 0.09, 0.26, M(cols[(k + Math.round(y * 3)) % 4]!), -0.4 + k * 0.4, y, z);
+  },
+  mannequin(g, p) {
+    const m = M(0xeeeae4, { roughness: 0.4 });
+    cyl(g, 0.2, 0.22, 0.03, METAL(), 0, 0, 0, 24);
+    cyl(g, 0.015, 0.015, 0.5, METAL(), 0, 0.03, 0, 8);
+    cyl(g, 0.12, 0.24, 0.6, M(p.accent), 0, 0.5, 0, 24);
+    cyl(g, 0.16, 0.12, 0.45, m, 0, 1.08, 0, 20);
+    cyl(g, 0.04, 0.04, 0.1, m, 0, 1.53, 0, 10);
+    const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.1, 2), m);
+    head.position.set(0, 1.7, 0);
+    head.castShadow = true;
+    g.add(head);
+  },
+  accspin(g, p) {
+    cyl(g, 0.25, 0.28, 0.04, METAL(), 0, 0, 0, 24);
+    cyl(g, 0.02, 0.02, 1.56, METAL(), 0, 0.04, 0, 8);
+    const cols = [p.accent, p.up, "#2f2f2f", "#c9a46a", "#6d7d8f"];
+    [0.6, 1.0, 1.4].forEach((y, t) => {
+      box(g, 0.56, 0.02, 0.02, METAL(), 0, y, 0);
+      box(g, 0.02, 0.02, 0.56, METAL(), 0, y, 0);
+      for (const [x, z] of [[0.25, 0], [-0.25, 0], [0, 0.25], [0, -0.25]] as const) box(g, 0.08, 0.2, 0.08, M(cols[(t + Math.abs(x * 8) + z * 4 + 5) % 5 | 0]!), x, y - 0.22, z);
+    });
+  },
+  fitting(g, p) {
+    const wall = M(p.wall), wd = M(p.wood);
+    box(g, 1.2, 2.2, 0.05, wall, 0, 0, -0.575);
+    for (const sx of [-1, 1]) box(g, 0.05, 2.2, 1.2, wall, sx * 0.575, 0, 0);
+    box(g, 1.2, 0.04, 0.04, METAL(), 0, 2.12, 0.56);
+    box(g, 0.55, 1.95, 0.04, M(p.up), -0.3, 0.12, 0.56);
+    box(g, 0.45, 1.2, 0.02, MIRROR(), 0, 0.5, -0.54);
+    box(g, 0.4, 0.45, 0.3, wd, 0.3, 0, -0.35);
+  },
+  mirror(g, p) {
+    box(g, 0.6, 1.8, 0.05, M(p.wood), 0, 0, -0.08);
+    box(g, 0.52, 1.7, 0.01, MIRROR(), 0, 0.05, -0.05);
+    box(g, 0.6, 0.03, 0.3, M(p.wood), 0, 0, 0);
+  },
+  cashdesk(g, p) {
+    box(g, 1.6, 0.95, 0.7, M(p.accent), 0, 0, 0);
+    box(g, 1.64, 0.05, 0.74, M(p.wood), 0, 0.95, 0);
+    box(g, 0.32, 0.22, 0.04, DARK(), 0.4, 1.0, -0.15);
+    box(g, 0.08, 0.04, 0.14, DARK(), 0.05, 1.0, -0.05);
+    box(g, 0.3, 0.12, 0.2, M(0xe9e2d6), -0.5, 1.0, -0.1);
+  },
+  bench(g, p) {
+    for (const [x, z] of [[-0.55, -0.17], [0.55, -0.17], [-0.55, 0.17], [0.55, 0.17]] as const) box(g, 0.04, 0.33, 0.04, M(p.wood), x, 0, z);
+    box(g, 1.2, 0.12, 0.45, M(p.up), 0, 0.33, 0);
+  },
+  plinth(g, p) {
+    box(g, 1.2, 0.38, 0.8, WHITE(), 0, 0, 0);
+    box(g, 1.22, 0.02, 0.82, M(p.wood), 0, 0.38, 0);
+    cyl(g, 0.08, 0.1, 0.3, M(p.accent), -0.3, 0.4, 0);
+    box(g, 0.3, 0.12, 0.25, M(p.up), 0.25, 0.4, 0.05);
+  },
+  /* bookshop / gift shop */
+  bookcase(g, p) {
+    const wd = M(p.wood), lv = [0.08, 0.48, 0.88, 1.28, 1.68];
+    shelves(g, 1.0, 0.35, 2.1, lv, wd);
+    lv.forEach((y, k) => books(g, -0.46, 0.46, y + 0.03, 0.02, 0.24, 0.32, 11 + k));
+  },
+  lowcase(g, p) {
+    const wd = M(p.wood);
+    shelves(g, 1.2, 0.35, 1.0, [0.06, 0.5], wd);
+    books(g, -0.56, 0.56, 0.09, 0.02, 0.24, 0.34, 21);
+    books(g, -0.56, 0.56, 0.53, 0.02, 0.24, 0.34, 22);
+    for (const [x, c] of [[-0.35, p.accent], [0.05, "#f2e6cf"], [0.4, "#23395b"]] as const) box(g, 0.22, 0.03, 0.28, M(c), x, 1.0, 0);
+  },
+  dblshelf(g, p) {
+    const wd = M(p.wood), lv = [0.06, 0.42, 0.78, 1.14];
+    box(g, 1.2, 1.5, 0.03, wd, 0, 0, 0);
+    for (const sx of [-1, 1]) box(g, 0.03, 1.5, 0.6, wd, sx * 0.585, 0, 0);
+    box(g, 1.2, 0.03, 0.6, wd, 0, 1.47, 0);
+    lv.forEach((y, k) => {
+      box(g, 1.14, 0.03, 0.6, wd, 0, y, 0);
+      books(g, -0.55, 0.55, y + 0.03, 0.15, 0.22, 0.3, 31 + k);
+      books(g, -0.55, 0.55, y + 0.03, -0.15, 0.22, 0.3, 41 + k);
+    });
+  },
+  bookspin(g) {
+    cyl(g, 0.26, 0.28, 0.05, METAL(), 0, 0, 0, 24);
+    cyl(g, 0.02, 0.02, 1.65, METAL(), 0, 0.05, 0, 8);
+    const r = rng(51);
+    for (let t = 0; t < 4; t++) {
+      const y = 0.3 + t * 0.34;
+      box(g, 0.42, 0.3, 0.42, METAL(), 0, y, 0);
+      for (const [x, z, ry] of [[0, 0.22, 0], [0, -0.22, 0], [0.22, 0, 1], [-0.22, 0, 1]] as const) {
+        const c = M(BOOK[Math.floor(r() * BOOK.length)]!);
+        if (ry) box(g, 0.02, 0.24, 0.32, c, x, y + 0.03, z);
+        else box(g, 0.32, 0.24, 0.02, c, x, y + 0.03, z);
+      }
+    }
+  },
+  cardrack(g, p) {
+    box(g, 1.2, 1.8, 0.04, M(p.wood), 0, 0, -0.13);
+    const r = rng(61), cols = ["#f2e6cf", "#e3879a", "#9fc48d", "#f6e27a", "#7c8fd1", "#ffffff", "#f2b880"];
+    for (let row = 0; row < 5; row++) {
+      const y = 0.25 + row * 0.3;
+      box(g, 1.14, 0.02, 0.12, M(p.wood), 0, y, -0.06);
+      for (let k = 0; k < 6; k++) box(g, 0.15, 0.2, 0.015, M(cols[Math.floor(r() * cols.length)]!), -0.47 + k * 0.188, y + 0.02, -0.05);
+    }
+  },
+  ladder(g, p) {
+    const L = new THREE.Group(), wd = M(p.wood);
+    for (const x of [-0.21, 0.21]) box(L, 0.045, 2.15, 0.045, wd, x, 0, 0);
+    for (let y = 0.3; y < 2.1; y += 0.3) box(L, 0.42, 0.03, 0.06, wd, 0, y, 0);
+    L.rotation.x = -0.258;
+    L.position.z = 0.27;
+    g.add(L);
+    for (const x of [-0.21, 0.21]) cyl(g, 0.035, 0.035, 0.03, DARK(), x, 0, 0.27, 12);
+    box(g, 0.5, 0.025, 0.025, METAL(), 0, 2.06, -0.28);
+  },
+  booktable(g, p) {
+    const wd = M(p.wood);
+    box(g, 1.4, 0.04, 0.9, wd, 0, 0.71, 0);
+    for (const [x, z] of [[-0.64, -0.39], [0.64, -0.39], [-0.64, 0.39], [0.64, 0.39]] as const) box(g, 0.05, 0.71, 0.05, wd, x, 0, z);
+    const r = rng(71);
+    for (const [x, z] of [[-0.45, -0.2], [-0.1, -0.2], [0.25, -0.2], [-0.45, 0.2], [-0.1, 0.2], [0.25, 0.2], [0.52, 0]] as const) {
+      const n = 1 + Math.floor(r() * 4);
+      box(g, 0.22, 0.035 * n, 0.3, M(BOOK[Math.floor(r() * BOOK.length)]!), x, 0.75, z);
+    }
+  },
+  kids(g, p) {
+    const mat = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 0.98, 0.02, 40), M(p.up));
+    mat.position.y = 0.01;
+    mat.receiveShadow = true;
+    g.add(mat);
+    for (const [x, z, c] of [[-0.5, -0.65, p.accent], [0.2, -0.7, "#f6e27a"]] as const) {
+      box(g, 0.6, 0.35, 0.45, M(c), x, 0.02, z);
+      books(g, x - 0.27, x + 0.27, 0.37, z, 0.3, 0.2, Math.round(x * 10 + 90));
+    }
+    for (const [x, z, c] of [[-0.45, 0.35, "#9fc48d"], [0.1, 0.55, "#7c8fd1"], [0.55, 0.15, "#f2b880"]] as const) cyl(g, 0.18, 0.2, 0.22, M(c), x, 0.02, z, 20);
+    box(g, 0.3, 0.02, 0.22, M("#f2e6cf"), 0.15, 0.03, 0.05);
+  },
+  armchair(g, p) {
+    const up = M(p.up);
+    box(g, 0.85, 0.42, 0.8, up, -0.17, 0, 0.03);
+    box(g, 0.85, 0.5, 0.16, up, -0.17, 0.42, -0.3);
+    for (const sx of [-1, 1]) box(g, 0.14, 0.22, 0.8, up, -0.17 + sx * 0.355, 0.42, 0.03);
+    cyl(g, 0.17, 0.17, 0.03, M(p.wood), 0.43, 0.52, 0, 24);
+    cyl(g, 0.025, 0.025, 0.52, M(p.wood), 0.43, 0, 0, 8);
+    box(g, 0.2, 0.04, 0.26, M(p.accent), 0.43, 0.55, 0);
+  },
+  cashctr(g, p) {
+    box(g, 1.6, 0.95, 0.7, M(p.wood), 0, 0, 0);
+    box(g, 1.64, 0.05, 0.74, M(p.accent), 0, 0.95, 0);
+    box(g, 0.32, 0.22, 0.04, DARK(), 0.45, 1.0, -0.15);
+    books(g, -0.7, -0.2, 1.0, 0, 0.18, 0.22, 81);
+  },
+  giftcube(g, p) {
+    box(g, 0.8, 0.45, 0.8, WHITE(), 0, 0, 0);
+    box(g, 0.55, 0.45, 0.55, M(p.accent), 0.08, 0.45, -0.08);
+    for (const [x, z, s, c] of [[-0.25, 0.25, 0.14, p.up], [0.2, 0.28, 0.1, "#f6e27a"], [0.1, -0.1, 0.12, "#f2e6cf"]] as const) box(g, s, s, s, M(c), x, x > 0 && z < 0 ? 0.9 : 0.45, z);
   },
   /* storage */
   dshelf(g) {

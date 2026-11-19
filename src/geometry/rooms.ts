@@ -1,7 +1,8 @@
 // Room geometry: the shaped shop floor plus an optional kitchen/storage strip.
 // Rooms are unions of grid cells; walls come from the boundaries between cells of different rooms.
 // Pure functions: no DOM or Three.js, so they can be unit-tested.
-import { ROOM_NAMES, WK } from "../data/catalog";
+import { WK } from "../data/catalog";
+import { roomName, typeOf } from "../data/shopTypes";
 import type { Axis, BBox, Boh, Cell, Geo, Layout, Opening, PlacedWindow, Room, RoomId, RoomInfo, Wall, WinLimits } from "../types";
 
 /** wall thickness */
@@ -176,7 +177,7 @@ export function computeGeo(L: Layout, lim: WinLimits): Geo {
     if (kd) kd.o.swing = swingTo(kd.W, to);
     if (B.hatch && kd && to === "kitchen") {
       const pl = place(ws, B.door >= 0 ? -1 : 1, 1.2);
-      if (pl && !(pl.W === kd.W && Math.abs(pl.c - kd.o.c) < 1.15)) add(pl, { w: 1.2, sill: 0.9, head: 1.5, kind: "hatch" });
+      if (pl && !(pl.W === kd.W && Math.abs(pl.c - kd.o.c) < 1.15)) add(pl, { w: 1.2, sill: 0.9, head: 1.5, kind: "hatch", label: typeOf(L) === "cafe" ? "Hatch" : "Pass-through" });
     }
     if (has("storage")) {
       const pd = add(place(pair("kitchen", "storage"), 0, 0.9), { w: 0.9, sill: 0, head: 2.1, kind: "door" });
@@ -236,7 +237,7 @@ export function computeGeo(L: Layout, lim: WinLimits): Geo {
     if (!cs.length) continue;
     const an = [...cs].sort((p, q) => p.z0 - q.z0 || p.x0 - q.x0)[0]!;
     rooms.push({
-      id, name: ROOM_NAMES[id], cells: cs, ax: an.x0, az: an.z0,
+      id, name: roomName(L, id), cells: cs, ax: an.x0, az: an.z0,
       area: cs.reduce((s, c) => s + (c.x1 - c.x0) * (c.z1 - c.z0), 0),
       x0: Math.min(...cs.map((c) => c.x0)), x1: Math.max(...cs.map((c) => c.x1)),
       z0: Math.min(...cs.map((c) => c.z0)), z1: Math.max(...cs.map((c) => c.z1)),

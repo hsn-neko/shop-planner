@@ -2,7 +2,8 @@
 import { PALETTES } from "./data/catalog";
 import { $, fmt, isWide } from "./dom";
 import { collides, dims, findClashes, footprint, itemHeight } from "./geometry/items";
-import { app, cat, newId, pushUndo, save, seatsOf, snap } from "./state";
+import { roomName } from "./data/shopTypes";
+import { app, cat, countsLabel, newId, pushUndo, save, snap } from "./state";
 import { itemsG, THREE } from "./three/core";
 import { BUILD, buildCustom } from "./three/furniture";
 import type { Placed } from "./types";
@@ -81,12 +82,11 @@ export function evaluate(): void {
     r.material.opacity = isBad ? 0.45 : 0.3;
   });
   app.clashSet = bad;
-  const seats = seatsOf(app.L);
-  $("#stSeats").textContent = `${seats} seats`;
+  $("#stCount").textContent = countsLabel(app.L);
   const cl = $("#stClash");
   cl.textContent = bad.size ? `${bad.size} clashing` : "No clashes";
   cl.classList.toggle("bad", bad.size > 0);
-  updateCounts(seats);
+  updateCounts();
   renderSlots();
   updateEmpty();
 }
@@ -114,7 +114,7 @@ export function addItem(type: string): void {
   pushUndo();
   const ct = cat(type), zr = ct.zone ? app.geo.rooms.find((r) => r.id === ct.zone) : undefined;
   const t = zr ? { x: (zr.x0 + zr.x1) / 2, z: (zr.z0 + zr.z1) / 2 } : viewCenter();
-  if (ct.zone && !zr) setTimeout(() => flashHint(`Add a ${ct.zone} in the Rooms tab to give this piece its own room.`), 50);
+  if (ct.zone && !zr) setTimeout(() => flashHint(`Add a ${roomName(app.L, ct.zone!).toLowerCase()} in the room editor to give this piece its own room.`), 50);
   const i: Placed = { id: newId(), type, x: snap(clampX(t.x)), z: snap(clampZ(t.z)), r: 0 };
   for (let k = 0; k < 40 && collides(i, app.L.items, cat); k++) {
     i.x = snap(clampX(i.x + ((k % 5) - 2) * 0.8));

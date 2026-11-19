@@ -1,6 +1,6 @@
 {
   "name": "shop-planner",
-  "version": "12.0.0",
+  "version": "13.0.0",
   "private": true,
   "description": "Shop Planner: plan a shop interior in 3D, 2D plan and walk-through views.",
   "scripts": {

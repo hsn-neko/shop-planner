@@ -1,8 +1,9 @@
 // The room editor: its own screen with a 2D plan you resize by dragging handles,
 // a 3D view for dragging window edges, a window panel, and the app-wide Settings page.
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { DEF_WIN, ROOM_NAMES, WK } from "../data/catalog";
-import { $, $$, $in, clampV, clone, fmt, r1, rr, TK } from "../dom";
+import { DEF_WIN, WK } from "../data/catalog";
+import { roomName, roomNameChoices } from "../data/shopTypes";
+import { $, $$, $in, clampV, clone, esc, fmt, r1, rr, TK } from "../dom";
 import { cafeCuts, computeGeo, defaultBoh, shapeOf, WT } from "../geometry/rooms";
 import { evaluate, footprintOf, rebuildItems } from "../items";
 import { drawPlan, fitPlan, type PlanTarget, s2w, w2s } from "../plan/plan";
@@ -125,12 +126,13 @@ function roomHandles(): Handle[] {
     if (bs.length) {
       const bx0 = Math.min(...bs.map((q) => q.x0)), bx1 = Math.max(...bs.map((q) => q.x1));
       const bz0 = Math.min(...bs.map((q) => q.z0)), bz1 = Math.max(...bs.map((q) => q.z1));
-      const tt = () => `Kitchen ${boh().mode === "both" ? "and storage " : ""}${fmt(boh().depth)} m deep`;
+      const n1 = () => roomName(L(), "kitchen"), n2 = () => roomName(L(), "storage").toLowerCase();
+      const tt = () => `${n1()} ${boh().mode === "both" ? `and ${n2()} ` : ""}${fmt(boh().depth)} m deep`;
       if (B.side === "back") H.push({ id: "bd", x: (bx0 + bx1) / 2, z: bz0, drag: "z", dark: true, tip: tt });
       else H.push({ id: "bd", x: B.side === "left" ? bx0 : bx1, z: (bz0 + bz1) / 2, drag: "x", dark: true, tip: tt });
       const ki = G.rooms.find((q) => q.id === "kitchen"), st = G.rooms.find((q) => q.id === "storage");
       if (B.mode === "both" && ki && st) {
-        const stt = () => `Kitchen ${Math.round(boh().share * 100)}% · storage ${100 - Math.round(boh().share * 100)}%`;
+        const stt = () => `${n1()} ${Math.round(boh().share * 100)}% · ${n2()} ${100 - Math.round(boh().share * 100)}%`;
         if (B.side === "back") H.push({ id: "split", x: ki.x1 <= st.x0 + 1e-6 ? ki.x1 : ki.x0, z: (bz0 + bz1) / 2, drag: "x", dark: true, tip: stt });
         else H.push({ id: "split", x: (bx0 + bx1) / 2, z: ki.z1 <= st.z0 + 1e-6 ? ki.z1 : ki.z0, drag: "z", dark: true, tip: stt });
       }
@@ -151,7 +153,7 @@ function roomHandles(): Handle[] {
   if (E.o && E.W) H.push({ id: "ent", x: E.o.c, z: E.W.c, drag: "door", tip: () => "Entrance" });
   for (const W of G.walls)
     for (const o of W.open)
-      if (o.role === "kdoor") H.push({ id: "kd", x: W.ax === "x" ? o.c : W.c, z: W.ax === "x" ? W.c : o.c, drag: "door", W, tip: () => "Kitchen door" });
+      if (o.role === "kdoor") H.push({ id: "kd", x: W.ax === "x" ? o.c : W.c, z: W.ax === "x" ? W.c : o.c, drag: "door", W, tip: () => `${roomName(L(), "kitchen")} door` });
   return H;
 }
 
@@ -541,7 +543,7 @@ function renderWinPanel(): void {
   const custom = !!q && (Math.abs(q.o.sill - ty.sill) > 1e-3 || Math.abs(q.o.head - Math.min(ty.head, L().room.h - S.gap)) > 1e-3);
   $("#wTitle").textContent = ty.name + (custom ? " (custom height)" : "");
   $("#wNote").textContent = q
-    ? `${ROOM_NAMES[q.W.room ?? "cafe"]} wall · ${fmt(q.o.head - q.o.sill)} m tall. Switch to 3D to drag its edges.`
+    ? `${roomName(app.L, q.W.room ?? "cafe")} wall · ${fmt(q.o.head - q.o.sill)} m tall. Switch to 3D to drag its edges.`
     : "This window doesn't fit on a wall here. Make it narrower or drag it to a longer wall.";
 }
 
@@ -964,16 +966,65 @@ function syncSettings(): void {
   const S = WS();
   for (const [id, k] of SF) $in("#" + id).value = String(S[k]);
   for (const b of $$("#sStep button")) b.setAttribute("aria-pressed", String(Number(b.dataset.v) === S.step));
+  renderNames();
+}
+
+/** How many saved layouts name a back room this. */
+function nameUses(n: string): number {
+  return Object.values(app.store.slots).filter((L) => L.names?.kitchen === n || L.names?.storage === n).length;
+}
+
+/** Back-room names added by the user. Built-in names are always offered and aren't listed here. */
+function renderNames(): void {
+  const list = app.store.settings.roomNames, el = $("#sNames");
+  el.innerHTML = list.length
+    ? list.map((n, k) => {
+        const u = nameUses(n), used = u ? `<small>used in ${u} layout${u > 1 ? "s" : ""}</small>` : "";
+        return `<span class="nchip">${esc(n)}${used}<button data-nrm="${k}" aria-label="Remove ${esc(n)}${u ? `, used in ${u} layout${u > 1 ? "s" : ""}` : ""}">✕</button></span>`;
+      }).join("")
+    : `<p class="note" style="margin:0">No names added yet.</p>`;
+  for (const b of $$<HTMLButtonElement>("[data-nrm]", el)) b.onclick = () => {
+    // layouts already using the name keep it; it just stops being offered
+    list.splice(Number(b.dataset.nrm), 1);
+    renderNames();
+    syncRoomInputs();
+    save();
+  };
+}
+function addName(): void {
+  const inp = $in("#sNameNew"), v = inp.value.trim().replace(/\s+/g, " ").slice(0, 24);
+  if (!v) return;
+  const all = roomNameChoices(app.store.settings.roomNames);
+  if (!all.some((n) => n.toLowerCase() === v.toLowerCase())) app.store.settings.roomNames.push(v);
+  inp.value = "";
+  renderNames();
+  syncRoomInputs();
+  save();
 }
 function openSettings(): void {
   syncSettings();
   $("#settings").hidden = false;
   $("#setScrim").hidden = false;
-  $("#sSillMin").focus();
+  // focusing a field on a touch screen pops up the keypad over the settings, so focus Close there instead
+  if (matchMedia("(pointer: fine)").matches) $("#sSillMin").focus();
+  else $("#setClose").focus();
+  fitToKeyboard();
 }
 function closeSettings(): void {
   $("#settings").hidden = true;
   $("#setScrim").hidden = true;
+}
+
+/** While a phone keyboard is up, keep the settings box inside the part of the screen still visible, with the field being typed in showing. */
+function fitToKeyboard(): void {
+  const vv = window.visualViewport, m = $("#settings");
+  if (!vv || m.hidden) return;
+  const kb = innerHeight - vv.height > 120;
+  m.classList.toggle("kb", kb);
+  m.style.setProperty("--vvt", `${vv.offsetTop}px`);
+  m.style.setProperty("--vvh", `${vv.height}px`);
+  const f = document.activeElement;
+  if (kb && f instanceof HTMLInputElement && m.contains(f)) f.scrollIntoView({ block: "center" });
 }
 function applySettings(): void {
   const S = WS();
@@ -1005,7 +1056,15 @@ function initSettings(): void {
     app.store.settings.win = { ...DEF_WIN };
     applySettings();
   };
+  for (const b of $$<HTMLButtonElement>("[data-sjump]")) b.onclick = () => $("#" + b.dataset.sjump).scrollIntoView({ behavior: "smooth", block: "start" });
+  $("#sNameAdd").onclick = addName;
+  $in("#sNameNew").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addName();
+  });
   $("#bSettings").onclick = openSettings;
+  window.visualViewport?.addEventListener("resize", fitToKeyboard);
+  window.visualViewport?.addEventListener("scroll", fitToKeyboard);
+  $("#settings").addEventListener("focusin", () => setTimeout(fitToKeyboard, 300));
   $("#wLimits").onclick = openSettings;
   $("#setClose").onclick = closeSettings;
   $("#setScrim").onclick = closeSettings;
