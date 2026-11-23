@@ -1,0 +1,3 @@
+# Known false positives for gitleaks, by fingerprint. Each line must say why it's safe.
+# "dessert-cafe-planner-v1" is the old browser-storage key name, not a secret.
+0eba3eef685539e7d0b04438ba7465f84bed63f9:index.html:generic-api-key:470

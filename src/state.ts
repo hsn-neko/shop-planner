@@ -3,6 +3,7 @@ import { BY, DEF_WIN, EXAMPLES } from "./data/catalog";
 import { countText } from "./data/shopTypes";
 import { clipAreas, dividerRects } from "./geometry/areas";
 import { clone } from "./dom";
+import { sanitizeStore } from "./data/sanitize";
 import { computeGeo } from "./geometry/rooms";
 import type { Geo, ItemDef, Layout, Store, WinLimits } from "./types";
 
@@ -23,12 +24,13 @@ function loadStore(): Store {
   let saved: Partial<Store> | null = null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) saved = JSON.parse(raw) as Partial<Store>;
+    // Saved data is checked field by field before use: it may be damaged, old or written by something else.
+    if (raw) saved = sanitizeStore(JSON.parse(raw));
   } catch {
     saved = null;
   }
   const s: Store = {
-    active: "A", slots: {}, order: [], custom: [], seen: {}, versions: {}, settings: { win: { ...DEF_WIN }, roomNames: [] },
+    active: "A", slots: Object.create(null) as Store["slots"], order: [], custom: [], seen: {}, versions: {}, settings: { win: { ...DEF_WIN }, roomNames: [] },
     ...(saved && saved.slots ? saved : {}),
   } as Store;
   if (!Array.isArray(s.custom)) s.custom = [];
@@ -39,7 +41,7 @@ function loadStore(): Store {
   if (!Array.isArray(s.settings.roomNames)) s.settings.roomNames = [];
   if (!Array.isArray(s.order) || !s.order.length) s.order = Object.keys(s.slots).length ? Object.keys(s.slots) : ["A", "B", "C"];
   for (const k of s.order) {
-    if (!s.slots[k]) s.slots[k] = clone(EXAMPLES[k as keyof typeof EXAMPLES] ?? EXAMPLES.C);
+    if (!s.slots[k]) s.slots[k] = clone((Object.hasOwn(EXAMPLES, k) ? EXAMPLES[k] : undefined) ?? EXAMPLES.C!);
     withIds(s.slots[k]!);
   }
   s.order = s.order.filter((k) => s.slots[k]);

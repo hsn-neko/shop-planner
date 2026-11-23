@@ -4,6 +4,7 @@ import { $, $$, $in, clone, esc, fmt, isDesk, isWide } from "../dom";
 import { rebuildItems, select, updateEmpty } from "../items";
 import { fitPlan } from "../plan/plan";
 import { buildRoom } from "../roomView";
+import { parseVersionData } from "../data/sanitize";
 import { KIND_ORDER, roomName, SHOP_TYPES, TYPE_ORDER, typeOf } from "../data/shopTypes";
 import { app, countsLabel, pushUndo, save, seatsOf, withIds } from "../state";
 import type { Layout, ShopType } from "../types";
@@ -36,7 +37,7 @@ export function renderSlots(): void {
   const s = app.store;
   $("#slots").innerHTML = s.order.map((k) => {
     const L = s.slots[k]!, nv = (s.versions[k] ?? []).length;
-    return `<button data-slot="${k}" aria-pressed="${k === s.active}">${esc(L.label || "Untitled")}<small>${SHOP_TYPES[typeOf(L)].name} · ${L.items.length} pieces · ${countsLabel(L)}</small><small>${fmt(L.room.w)} × ${fmt(L.room.d)} m${nv ? ` · ${nv} version${nv > 1 ? "s" : ""}` : ""}</small></button>`;
+    return `<button data-slot="${esc(k)}" aria-pressed="${k === s.active}">${esc(L.label || "Untitled")}<small>${SHOP_TYPES[typeOf(L)].name} · ${L.items.length} pieces · ${countsLabel(L)}</small><small>${fmt(L.room.w)} × ${fmt(L.room.d)} m${nv ? ` · ${nv} version${nv > 1 ? "s" : ""}` : ""}</small></button>`;
   }).join("");
   for (const b of $$<HTMLButtonElement>("[data-slot]")) b.onclick = () => {
     if (b.dataset.slot !== s.active) loadSlot(b.dataset.slot!);
@@ -117,14 +118,15 @@ export function renderVersions(): void {
     el.innerHTML = `<p class="vempty">No versions yet. Save one before trying a big change, so you can always go back.</p>`;
     return;
   }
-  el.innerHTML = list.map((v) => `<div class="vrow"><div style="min-width:0"><b>${esc(v.name)}</b><small>${stamp(v.time)} · ${v.count} pieces · ${v.sum ?? `${v.seats} seats`}</small></div>
-    <button class="btn" data-vres="${v.id}">Restore</button><button class="btn" data-vcopy="${v.id}">Copy</button><button class="btn danger" data-vdel="${v.id}" aria-label="Delete version ${esc(v.name)}">${vArmed === v.id ? "Sure?" : "✕"}</button></div>`).join("");
+  el.innerHTML = list.map((v) => `<div class="vrow"><div style="min-width:0"><b>${esc(v.name)}</b><small>${stamp(v.time)} · ${esc(v.count)} pieces · ${esc(v.sum ?? `${v.seats} seats`)}</small></div>
+    <button class="btn" data-vres="${esc(v.id)}">Restore</button><button class="btn" data-vcopy="${esc(v.id)}">Copy</button><button class="btn danger" data-vdel="${esc(v.id)}" aria-label="Delete version ${esc(v.name)}">${vArmed === v.id ? "Sure?" : "✕"}</button></div>`).join("");
   const find = (id: string | undefined) => list.find((v) => v.id === id);
   for (const b of $$<HTMLButtonElement>("[data-vres]", el)) b.onclick = () => {
     const v = find(b.dataset.vres);
-    if (!v) return;
+    const parsed = v && parseVersionData(v.data);
+    if (!v || !parsed) return flashHint("This version can't be opened: its saved data is damaged.");
     pushUndo();
-    const d = withIds(JSON.parse(v.data) as Layout);
+    const d = withIds(parsed);
     d.label = app.L.label;
     app.store.slots[app.store.active] = d;
     loadSlot(app.store.active);
@@ -132,8 +134,9 @@ export function renderVersions(): void {
   };
   for (const b of $$<HTMLButtonElement>("[data-vcopy]", el)) b.onclick = () => {
     const v = find(b.dataset.vcopy);
-    if (!v) return;
-    createLayout(JSON.parse(v.data) as Layout, `${app.L.label} · ${v.name}`);
+    const parsed = v && parseVersionData(v.data);
+    if (!v || !parsed) return flashHint("This version can't be opened: its saved data is damaged.");
+    createLayout(parsed, `${app.L.label} · ${v.name}`);
     flashHint(`Opened “${v.name}” as a new layout.`);
   };
   for (const b of $$<HTMLButtonElement>("[data-vdel]", el)) b.onclick = () => {

@@ -3,3 +3,9 @@ dist/
 dist-artifact/
 playwright-report/
 test-results/
+
+# Local secrets and environment files never belong in git
+.env
+.env.*
+*.pem
+*.key

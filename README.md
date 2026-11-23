@@ -28,6 +28,7 @@ src/
   data/catalog.ts     furniture catalogue, palettes, presets, window types
   data/shopTypes.ts   shop types: room names, counts, defaults (unit-tested)
   data/finishes.ts    floor finishes for areas
+  data/sanitize.ts    checks saved data before use (unit-tested)
   geometry/           pure room, floor-area and footprint maths (unit-tested, no DOM)
   three/              renderer, scene, furniture and room meshes
   plan/plan.ts        2D floor plan drawing and pointer handling
@@ -38,11 +39,14 @@ src/
   styles.css, fonts/
 tests/
   unit/               Vitest tests for src/geometry, floor areas and shop types
-  e2e/                Playwright smoke tests against the production build
+  e2e/                Playwright smoke and security tests against the production build
+  live/               checks against the published site (run by CI after each deploy)
 ```
 
 ## Data
 Layouts, versions and custom items are stored in the browser's localStorage (key `shop-planner-v1`), so each browser and device keeps its own copy. Plans from the old Dessert Cafe Planner (key `dessert-cafe-planner-v1`) aren't carried over. The GitHub Pages site has a different origin from the claude.ai artifact, so plans made in one don't appear in the other.
+
+Saved data is treated as untrusted. On load, `src/data/sanitize.ts` rebuilds it from an allow-list: unknown fields are dropped, unknown shop types, palettes and area kinds fall back to defaults, numbers are clamped to their ranges, ids must be plain, colours must be `#hex`, and list lengths are capped. Values that go into HTML are escaped as well. Saved versions are checked the same way when they're restored.
 
 ## Develop
 ```bash
@@ -58,13 +62,25 @@ npx playwright test --project=chromium
 ```
 
 ## CI/CD
-`.github/workflows/ci.yml` runs on every push and pull request:
+`.github/workflows/ci.yml` runs on every push and pull request, and weekly on Mondays:
 
-1. **Checks**: typecheck, unit tests, the Pages build and the single-file build.
+1. **Checks**: `npm audit` (fails on high or critical advisories), typecheck, unit tests, the Pages build and the single-file build.
 2. **Test**: Playwright smoke tests in Chromium, Firefox and WebKit (Safari's engine), plus Pixel 7 and iPhone 14 phone emulation, against the production build. They check that the page loads with no script errors and nothing from other sites, the 3D, 2D plan and walk views switch, placed furniture survives a reload, the room editor adds, edits and removes windows and resizes the shop, new layouts start from a chosen shop type, back rooms take names added in Settings, mixed layouts split the floor into areas whose dividers clash with furniture, and the page falls back to the 2D plan when WebGL is unavailable. Headless Firefox is asked for software WebGL; where it has none, the view test checks the 2D fallback instead.
-3. **Deploy**: when everything passes on `main`, `dist/` is published to GitHub Pages.
+   **Security tests** (`tests/e2e/security.spec.ts`) seed the browser storage with hostile data (script in colours, ids and names; `__proto__` and other built-in names; unknown kinds; impossible numbers; tens of thousands of items) and check that no markup is injected and the app still starts. They also check the Content Security Policy is set, that using every view and editor triggers no violation, and that an injected inline script is blocked.
+3. **Deploy**: when everything passes on a push to `main`, `dist/` is published to GitHub Pages.
+4. **Live check**: after each deploy, and in the weekly run, `tests/live` checks the published site still sends its Content Security Policy, loads nothing from other sites and starts without errors.
 
-Workflow actions are pinned to exact commits, with the version in a comment beside each.
+`.github/workflows/security.yml` runs on every push and pull request, and weekly:
+- **CodeQL** scans the TypeScript and the workflow files (security-extended queries); results appear under Security → Code scanning.
+- **Dependency review** blocks a pull request that adds a dependency with a known moderate or worse vulnerability.
+- **Secret scan**: the open-source gitleaks binary, checked against its published SHA-256, scans the whole git history. Reviewed false positives go in `.gitleaksignore` with a reason.
+- **Workflow lint**: zizmor checks the workflows for risky patterns.
+
+Dependabot (`.github/dependabot.yml`) opens weekly update pull requests for npm packages and for the pinned actions, waiting 7 days after each release.
+
+Workflow actions are pinned to exact commits, with the version in a comment beside each. Checkouts don't keep the GitHub token (`persist-credentials: false`), and each job gets only the permissions it needs.
+
+The Pages build sets a Content Security Policy in a `<meta>` tag (see `vite.config.ts`): scripts, styles, fonts and images only from the site itself, no inline scripts, no plugins. The single-file artifact build inlines its script, so it doesn't carry this policy.
 
 One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions.**
 
