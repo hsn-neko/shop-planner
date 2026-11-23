@@ -2,6 +2,8 @@
 import { BY } from "../data/catalog";
 import { fmt, rr, TK } from "../dom";
 import { tableChairs } from "../geometry/items";
+import { FINISHES } from "../data/finishes";
+import { areaCountText, areaSummaries } from "../geometry/areas";
 import { defaultBoh, shapeOf, WT } from "../geometry/rooms";
 import { dimsOf, heightOf, itemColor, moveTo, select } from "../items";
 import { app, cat, pushUndo, save } from "../state";
@@ -212,6 +214,19 @@ export function drawPlan(T: PlanTarget): void {
     c.restore();
     c.globalAlpha = 1;
   }
+  // floor areas: their finish as a tint, and their dividers
+  for (const A of L.areas ?? []) {
+    const [x0, y0] = P(A.x0, A.z0), F = FINISHES[A.finish];
+    c.fillStyle = F ? F.col : TK.accent;
+    c.globalAlpha = F ? 0.38 : 0.07;
+    c.fillRect(x0, y0, (A.x1 - A.x0) * s, (A.z1 - A.z0) * s);
+    c.globalAlpha = 1;
+  }
+  for (const dv of geo.dividers) {
+    const [x0, y0] = P(dv.x0, dv.z0);
+    c.fillStyle = dv.kind === "planter" ? "#6f9a5a" : dv.kind === "bookcase" ? "#9a7650" : TK.muted;
+    c.fillRect(x0, y0, (dv.x1 - dv.x0) * s, (dv.z1 - dv.z0) * s);
+  }
   // walls with gaps for openings
   c.fillStyle = TK.fg;
   for (const wl of geo.walls) {
@@ -343,6 +358,34 @@ export function drawPlan(T: PlanTarget): void {
     const ct = cat(i.type), sel = app.selected === i.id, dm = dimsOf(i);
     label(c, ct.name.length > 18 && !sel ? ct.name.slice(0, 16) + "…" : ct.name, px, py - (sel ? 7 : 0), 11.5, 600, TK.fg);
     if (sel) label(c, `${fmt(dm.w)} × ${fmt(dm.d)} m · ${fmt(heightOf(i))} m tall${ct.seats ? ` · ${ct.seats} seats` : ""}`, px, py + 8, 10.5, 500, TK.muted);
+  }
+  // floor area outlines and names, over furniture so they stay readable
+  const sums = areaSummaries(L, cat);
+  for (const A of L.areas ?? []) {
+    const [x0, y0] = P(A.x0, A.z0), [x1, y1] = P(A.x1, A.z1);
+    c.save();
+    c.strokeStyle = TK.accent;
+    c.lineWidth = 1.5;
+    c.setLineDash([6, 4]);
+    c.strokeRect(x0 + 1, y0 + 1, x1 - x0 - 2, y1 - y0 - 2);
+    c.restore();
+    const g = sums.find((q) => q.ids.includes(A.id));
+    if (!g || g.ids[0] !== A.id || x1 - x0 < 70) continue;
+    const ct = areaCountText(g), txt = `${g.name} · ${fmt(g.size)} m²${ct ? ` · ${ct}` : ""}`;
+    c.font = "700 11px Figtree, system-ui, sans-serif";
+    const tw = Math.min(c.measureText(txt).width, x1 - x0 - 16);
+    c.fillStyle = TK.accent;
+    rr(c, x0 + 4, y1 - 22, tw + 10, 17, 5);
+    c.fill();
+    c.save();
+    c.beginPath();
+    c.rect(x0 + 4, y1 - 22, tw + 10, 17);
+    c.clip();
+    c.fillStyle = TK.paper;
+    c.textAlign = "left";
+    c.textBaseline = "middle";
+    c.fillText(txt, x0 + 9, y1 - 13.5);
+    c.restore();
   }
   // room names and areas, drawn over furniture so they stay readable
   if (geo.rooms.length > 1 || shapeOf(L.room).shape !== "rect") for (const r of geo.rooms) {

@@ -9,10 +9,8 @@ export interface ShopTypeDef {
   note: string;
   /** default names of the first ("kitchen") and second ("storage") back rooms */
   back: [string, string];
-  /** what the header counts */
-  count: CountKey;
-  /** the opening between shop floor and first back room */
-  hatch: string;
+  /** what the header counts; null counts everything that isn't zero */
+  count: CountKey | null;
   /** palette a new layout starts on */
   palette: string;
   /** starter presets, by EXAMPLES key */
@@ -20,11 +18,14 @@ export interface ShopTypeDef {
 }
 
 export const SHOP_TYPES: Record<ShopType, ShopTypeDef> = {
-  cafe: { name: "Cafe / bakery", note: "Counters, tables and a kitchen", back: ["Kitchen", "Storage"], count: "seats", hatch: "Serving hatch", palette: "pistachio", presets: ["A", "B"] },
-  retail: { name: "Retail boutique", note: "Rails, shelving bays and fitting rooms", back: ["Stockroom", "Staff room"], count: "fixtures", hatch: "Pass-through", palette: "gallery", presets: ["R1", "R2"] },
-  books: { name: "Bookshop / gift shop", note: "Bookcases, displays and a reading corner", back: ["Stockroom", "Office"], count: "shelving", hatch: "Pass-through", palette: "library", presets: ["K1", "K2"] },
+  cafe: { name: "Cafe / bakery", note: "Counters, tables and a kitchen", back: ["Kitchen", "Storage"], count: "seats", palette: "pistachio", presets: ["A", "B"] },
+  retail: { name: "Retail boutique", note: "Rails, shelving bays and fitting rooms", back: ["Stockroom", "Staff room"], count: "fixtures", palette: "gallery", presets: ["R1", "R2"] },
+  books: { name: "Bookshop / gift shop", note: "Bookcases, displays and a reading corner", back: ["Stockroom", "Office"], count: "shelving", palette: "library", presets: ["K1", "K2"] },
+  mixed: { name: "Mixed shop", note: "Combine a café, books or retail in floor areas", back: ["Kitchen", "Stockroom"], count: null, palette: "scandi", presets: ["M1", "M2"] },
 };
-export const TYPE_ORDER: ShopType[] = ["cafe", "retail", "books"];
+export const TYPE_ORDER: ShopType[] = ["cafe", "retail", "books", "mixed"];
+/** The types whose furniture and palettes are their own; a mixed shop draws on all of them. */
+export const KIND_ORDER: ShopType[] = ["cafe", "retail", "books"];
 
 /** Names offered for back rooms before any are added in Settings. */
 export const BUILTIN_ROOM_NAMES = ["Kitchen", "Storage", "Stockroom", "Staff room", "Office", "Workroom"];
@@ -60,9 +61,13 @@ const UNIT: Record<CountKey, (v: number) => string> = {
   fixtures: (v) => `${v} fixture${v === 1 ? "" : "s"}`,
   shelving: (v) => `${String(v).replace(/\.0$/, "")} m shelving`,
 };
-/** The type's own count, then any other count that isn't zero: "18 m shelving · 6 seats". */
+/** The type's own count, then any other count that isn't zero: "18 m shelving · 6 seats". A mixed shop shows every count that isn't zero. */
 export function countText(L: Layout, cat: (t: string) => ItemDef): string {
-  const n = countsOf(L, cat), own = SHOP_TYPES[typeOf(L)].count;
-  const keys: CountKey[] = [own, ...(["seats", "fixtures", "shelving"] as CountKey[]).filter((k) => k !== own && n[k] > 0)];
-  return keys.map((k) => UNIT[k](n[k])).join(" · ");
+  const n = countsOf(L, cat), own = SHOP_TYPES[typeOf(L)].count, all: CountKey[] = ["seats", "fixtures", "shelving"];
+  const keys: CountKey[] = own ? [own, ...all.filter((k) => k !== own && n[k] > 0)] : all.filter((k) => n[k] > 0);
+  return keys.length ? keys.map((k) => UNIT[k](n[k])).join(" · ") : "Nothing counted yet";
 }
+
+/** The opening between the shop floor and the first back room: a serving hatch when that room is a kitchen. */
+export const hatchName = (L: Layout, short = false): string =>
+  roomName(L, "kitchen") === "Kitchen" ? (short ? "Hatch" : "Serving hatch") : "Pass-through";

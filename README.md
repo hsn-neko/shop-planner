@@ -1,11 +1,12 @@
 # Shop Planner
 
-An interior planning sandbox for a shop: a cafe or bakery, a retail boutique, or a bookshop or gift shop. Built with [Vite](https://vite.dev) and strict TypeScript on top of Three.js r128 (MIT licence). The Bricolage Grotesque and Figtree fonts (SIL Open Font License) are bundled into the build, so visitors make no requests to other sites. It runs in any modern browser on phone, tablet and desktop.
+An interior planning sandbox for a shop: a cafe or bakery, a retail boutique, a bookshop or gift shop, or a mixed shop that combines them. Built with [Vite](https://vite.dev) and strict TypeScript on top of Three.js r128 (MIT licence). The Bricolage Grotesque and Figtree fonts (SIL Open Font License) are bundled into the build, so visitors make no requests to other sites. It runs in any modern browser on phone, tablet and desktop.
 
 **Live:** https://hsn-neko.github.io/shop-planner/ (deployed from `main`)
 
 ## What it does
-- Shop types: cafe / bakery, retail boutique, bookshop / gift shop. You pick the type when you start a layout (blank or one of the type's two presets) and it stays fixed. It sets the back-room names, what the header counts (seats, display fixtures or metres of shelving) and which furniture and palettes are listed first. Every piece and palette works in every type.
+- Shop types: cafe / bakery, retail boutique, bookshop / gift shop, and mixed shop (counts everything; its back rooms default to Kitchen + Stockroom; presets Book café and Concept store). You pick the type when you start a layout (blank or one of the type's two presets) and it stays fixed. It sets the back-room names, what the header counts (seats, display fixtures or metres of shelving) and which furniture and palettes are listed first. Every piece and palette works in every type.
+- Floor areas (every type): rectangles of shop floor drawn in the room editor, each with a name, a kind (Café counts seats, Books shelving, Retail fixtures, General nothing), its own floor finish (terrazzo, checker or hexagon tiles, polished concrete, light oak, dark walnut, herringbone, grey or green carpet, rug) and optional low dividers (half-height wall, planter box or low bookcase) with a 1.2 m opening you can slide. Areas can't overlap; rectangles that share a name count as one area. Dividers act like walls for clashes and walking. Each area's size and count shows in the inventory and on the 2D plan.
 - Views: 3D (orbit), 2D floor plan, walk-through from the entrance.
 - Room editor: drag handles to resize walls, shape the L/T/U cut-out, set back-room depth and the split between the two back rooms, and slide the entrance and back-room door.
 - Windows: add them to any outside wall; in the room editor's 3D view drag their edges to set width, sill and top, or drag their ends in the 2D plan. Window, shopfront and high presets.
@@ -26,15 +27,17 @@ src/
   state.ts            app state, saving, undo
   data/catalog.ts     furniture catalogue, palettes, presets, window types
   data/shopTypes.ts   shop types: room names, counts, defaults (unit-tested)
-  geometry/           pure room and footprint maths (unit-tested, no DOM)
+  data/finishes.ts    floor finishes for areas
+  geometry/           pure room, floor-area and footprint maths (unit-tested, no DOM)
   three/              renderer, scene, furniture and room meshes
   plan/plan.ts        2D floor plan drawing and pointer handling
   editor/roomEditor.ts room editor (2D handles, 3D window drags) and Settings
+  editor/areaEditor.ts floor-area handles and panel
   ui/                 panels: tabs, inventory, layouts, room controls, selection, studio
   views.ts            3D / plan / walk views and the render loop
   styles.css, fonts/
 tests/
-  unit/               Vitest tests for src/geometry and shop types
+  unit/               Vitest tests for src/geometry, floor areas and shop types
   e2e/                Playwright smoke tests against the production build
 ```
 
@@ -58,7 +61,7 @@ npx playwright test --project=chromium
 `.github/workflows/ci.yml` runs on every push and pull request:
 
 1. **Checks**: typecheck, unit tests, the Pages build and the single-file build.
-2. **Test**: Playwright smoke tests in Chromium, Firefox and WebKit (Safari's engine), plus Pixel 7 and iPhone 14 phone emulation, against the production build. They check that the page loads with no script errors and nothing from other sites, the 3D, 2D plan and walk views switch, placed furniture survives a reload, the room editor adds, edits and removes windows and resizes the shop, new layouts start from a chosen shop type, back rooms take names added in Settings, and the page falls back to the 2D plan when WebGL is unavailable. Headless Firefox is asked for software WebGL; where it has none, the view test checks the 2D fallback instead.
+2. **Test**: Playwright smoke tests in Chromium, Firefox and WebKit (Safari's engine), plus Pixel 7 and iPhone 14 phone emulation, against the production build. They check that the page loads with no script errors and nothing from other sites, the 3D, 2D plan and walk views switch, placed furniture survives a reload, the room editor adds, edits and removes windows and resizes the shop, new layouts start from a chosen shop type, back rooms take names added in Settings, mixed layouts split the floor into areas whose dividers clash with furniture, and the page falls back to the 2D plan when WebGL is unavailable. Headless Firefox is asked for software WebGL; where it has none, the view test checks the 2D fallback instead.
 3. **Deploy**: when everything passes on `main`, `dist/` is published to GitHub Pages.
 
 Workflow actions are pinned to exact commits, with the version in a comment beside each.
@@ -66,4 +69,4 @@ Workflow actions are pinned to exact commits, with the version in a comment besi
 One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions.**
 
 ## Ideas for next rounds
-Mixed shops and floor areas (next), export/import layouts between devices, budget tally, customer flow line, floor-plan image tracing, entrance on any wall.
+Export/import layouts between devices, budget tally, customer flow line, floor-plan image tracing, entrance on any wall.

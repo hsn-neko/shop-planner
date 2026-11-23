@@ -2,8 +2,10 @@
 import { PALETTES } from "../data/catalog";
 import { WT } from "../geometry/rooms";
 import type { Geo, Layout, Palette, RoomId, Wall } from "../types";
+import { FINISHES } from "../data/finishes";
 import { roomName } from "../data/shopTypes";
-import { backRoomTexture, box, cyl, floorTexture, M, roomG, scene, sun, THREE } from "./core";
+import { books } from "./furniture";
+import { backRoomTexture, box, cyl, finishTexture, floorTexture, M, roomG, scene, sun, THREE } from "./core";
 
 /** Each wall has a full-height version and a cut-down one for the dollhouse view. */
 export interface WallMesh {
@@ -94,6 +96,7 @@ export function buildRoomMeshes(geo: Geo, L: Layout): void {
     f.receiveShadow = true;
     roomG.add(f);
   }
+  buildAreaMeshes(geo, L, p);
   buildWallMeshes(geo, p, h);
   const E = geo.entrance;
   if (E.W) {
@@ -125,4 +128,56 @@ export function buildRoomMeshes(geo: Geo, L: Layout): void {
 /** Kitchens get tiles; every other back room gets plain concrete. */
 function backTex(L: Layout, id: "kitchen" | "storage"): THREE.CanvasTexture {
   return backRoomTexture(roomName(L, id) === "Kitchen" ? "kitchen" : "storage");
+}
+
+/** Floor areas with their own finish, and the low dividers around areas. */
+function buildAreaMeshes(geo: Geo, L: Layout, p: Palette): void {
+  const tex: Record<string, THREE.CanvasTexture> = {};
+  for (const a of L.areas ?? []) {
+    const F = FINISHES[a.finish];
+    if (!F) continue;
+    const w = a.x1 - a.x0, d = a.z1 - a.z0, t = (tex[a.finish] ??= finishTexture(a.finish)).clone();
+    t.needsUpdate = true;
+    if (F.tile) {
+      t.repeat.set(w / F.tile, d / F.tile);
+      t.offset.set(a.x0 / F.tile, -a.z1 / F.tile);
+    }
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(w, d), M(0xffffff, { map: t, roughness: F.grp === "Soft" ? 1 : 0.6 }));
+    f.rotation.x = -Math.PI / 2;
+    f.position.set((a.x0 + a.x1) / 2, 0.003, (a.z0 + a.z1) / 2);
+    f.receiveShadow = true;
+    roomG.add(f);
+  }
+  const leaf = M(0x5f8a4e, { roughness: 0.9 }), leaf2 = M(0x7aa35f, { roughness: 0.9 });
+  geo.dividers.forEach((dv, n) => {
+    const g = new THREE.Group(), len = dv.ax === "x" ? dv.x1 - dv.x0 : dv.z1 - dv.z0, t = dv.ax === "x" ? dv.z1 - dv.z0 : dv.x1 - dv.x0;
+    if (dv.kind === "wall") {
+      box(g, len, dv.h - 0.04, t, M(p.wall, { roughness: 0.85 }), 0, 0, 0);
+      box(g, len + 0.02, 0.04, t + 0.04, M(p.wood), 0, dv.h - 0.04, 0);
+    } else if (dv.kind === "planter") {
+      box(g, len, 0.55, t, M(p.wood, { roughness: 0.8 }), 0, 0, 0);
+      box(g, len - 0.06, 0.02, t - 0.06, M(0x4a3a2c), 0, 0.53, 0);
+      for (let x = -len / 2 + 0.2; x <= len / 2 - 0.15; x += 0.32) {
+        const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2 + ((x * 7 + n) % 3 === 0 ? 0.04 : 0), 1), (Math.round(x * 10) + n) % 2 ? leaf : leaf2);
+        b.position.set(x, 0.7, 0);
+        b.scale.set(1, 0.9, Math.min(1, t / 0.4));
+        b.castShadow = true;
+        g.add(b);
+      }
+    } else {
+      const wd = M(p.wood);
+      for (const sx of [-1, 1]) box(g, 0.03, dv.h, t, wd, (sx * len) / 2 - sx * 0.015, 0, 0);
+      box(g, len, 0.03, t, wd, 0, 0.04, 0);
+      box(g, len, 0.03, t, wd, 0, 0.5, 0);
+      box(g, len, 0.03, t, wd, 0, dv.h - 0.03, 0);
+      box(g, len, dv.h, 0.02, wd, 0, 0, 0);
+      for (const [y, s] of [[0.07, 1], [0.53, 2]] as const) {
+        books(g, -len / 2 + 0.04, len / 2 - 0.04, y, t / 4, t / 2 - 0.03, 0.36, n * 10 + s);
+        books(g, -len / 2 + 0.04, len / 2 - 0.04, y, -t / 4, t / 2 - 0.03, 0.36, n * 10 + s + 5);
+      }
+    }
+    g.position.set((dv.x0 + dv.x1) / 2, 0, (dv.z0 + dv.z1) / 2);
+    if (dv.ax === "z") g.rotation.y = Math.PI / 2;
+    roomG.add(g);
+  });
 }

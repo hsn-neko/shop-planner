@@ -2,7 +2,8 @@
 // Rooms are unions of grid cells; walls come from the boundaries between cells of different rooms.
 // Pure functions: no DOM or Three.js, so they can be unit-tested.
 import { WK } from "../data/catalog";
-import { roomName, typeOf } from "../data/shopTypes";
+import { hatchName, roomName } from "../data/shopTypes";
+import { dividerRects } from "./areas";
 import type { Axis, BBox, Boh, Cell, Geo, Layout, Opening, PlacedWindow, Room, RoomId, RoomInfo, Wall, WinLimits } from "../types";
 
 /** wall thickness */
@@ -177,7 +178,7 @@ export function computeGeo(L: Layout, lim: WinLimits): Geo {
     if (kd) kd.o.swing = swingTo(kd.W, to);
     if (B.hatch && kd && to === "kitchen") {
       const pl = place(ws, B.door >= 0 ? -1 : 1, 1.2);
-      if (pl && !(pl.W === kd.W && Math.abs(pl.c - kd.o.c) < 1.15)) add(pl, { w: 1.2, sill: 0.9, head: 1.5, kind: "hatch", label: typeOf(L) === "cafe" ? "Hatch" : "Pass-through" });
+      if (pl && !(pl.W === kd.W && Math.abs(pl.c - kd.o.c) < 1.15)) add(pl, { w: 1.2, sill: 0.9, head: 1.5, kind: "hatch", label: hatchName(L, true) });
     }
     if (has("storage")) {
       const pd = add(place(pair("kitchen", "storage"), 0, 0.9), { w: 0.9, sill: 0, head: 2.1, kind: "door" });
@@ -261,12 +262,13 @@ export function computeGeo(L: Layout, lim: WinLimits): Geo {
     if (!any || x0 < X(0) - 0.01 || x1 > X(nx) + 0.01 || z0 < Z(0) - 0.01 || z1 > Z(nz) + 0.01) return null;
     return s.size === 1 && !s.has(null) ? ([...s][0] as RoomId) : null;
   };
-  return { rooms, walls, cells, bbox, cellAt, rectIn, entrance, windows: winRes };
+  return { rooms, walls, cells, bbox, cellAt, rectIn, entrance, windows: winRes, dividers: dividerRects(L.areas) };
 }
 
 /** Whether a person standing at (x, z) is inside a room or passing through a doorway. */
 export function canWalk(geo: Geo, x: number, z: number): boolean {
   const m = 0.22;
+  if (geo.dividers.some((d) => x > d.x0 - m && x < d.x1 + m && z > d.z0 - m && z < d.z1 + m)) return false;
   if (geo.rectIn(x - m, x + m, z - m, z + m)) return true;
   return geo.walls.some((wl) => wl.open.some((o) => o.sill === 0 && o.kind !== "entrance" &&
     (wl.ax === "x"

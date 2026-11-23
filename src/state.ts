@@ -1,6 +1,7 @@
 // App state shared by every module: the saved store, the open layout, its geometry and view state.
 import { BY, DEF_WIN, EXAMPLES } from "./data/catalog";
 import { countText } from "./data/shopTypes";
+import { clipAreas, dividerRects } from "./geometry/areas";
 import { clone } from "./dom";
 import { computeGeo } from "./geometry/rooms";
 import type { Geo, ItemDef, Layout, Store, WinLimits } from "./types";
@@ -72,6 +73,12 @@ export const snap = (v: number): number => Math.round(v / 0.05) * 0.05;
 
 export function refreshGeo(): Geo {
   app.geo = computeGeo(app.L, WS());
+  // floor areas follow the shop floor when the room shrinks
+  if (app.L.areas?.length) {
+    const cs = app.geo.cells.filter((c) => c.id === "cafe");
+    const floor = { x0: Math.min(...cs.map((c) => c.x0)), x1: Math.max(...cs.map((c) => c.x1)), z0: Math.min(...cs.map((c) => c.z0)), z1: Math.max(...cs.map((c) => c.z1)) };
+    if (clipAreas(app.L.areas, floor)) app.geo.dividers = dividerRects(app.L.areas);
+  }
   return app.geo;
 }
 

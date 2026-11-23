@@ -197,3 +197,46 @@ test("back rooms can take a name added in Settings", async ({ page }) => {
   await page.locator("#reDone").click();
   expect(errors, errors.join("\n")).toEqual([]);
 });
+
+test("mixed shops split the floor into areas", async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto("/");
+  await expect(page.locator("#stCount")).toHaveText(/seats$/);
+  await openTab(page, "layouts");
+  await page.locator('[data-stype="mixed"]').click();
+  await page.locator('[data-new="M1"]').click();
+  await expect(page.locator("#stCount")).toHaveText(/^\d+ seats · [\d.]+ m shelving$/);
+  await expect(page.locator("#stClash")).toHaveText("No clashes");
+  await expect(page.locator("#areaSum")).toContainText("Café");
+  await expect(page.locator("#areaSum")).toContainText("Books");
+
+  await openRoomEditor(page);
+  await expect(page.locator("#aChips button")).toHaveCount(2);
+  await page.locator("#aChips button", { hasText: "Books" }).click();
+  await expect(page.locator("#aPanel")).toBeVisible();
+  await expect(page.locator('#aKind [data-v="books"]')).toHaveAttribute("aria-pressed", "true");
+
+  // a divider with no opening across the front of the café blocks nothing here, but one through tables clashes
+  await page.locator("#aChips button", { hasText: "Café" }).click();
+  await page.locator('[data-dkind="w"]').selectOption("wall");
+  await page.locator("#reDone").click();
+  await expect(page.locator("#stClash")).not.toHaveText("No clashes");
+  await page.locator("#bUndo").click();
+  await expect(page.locator("#stClash")).toHaveText("No clashes");
+
+  // the two areas cover the whole floor, so a new one needs room: delete Books first
+  await openRoomEditor(page);
+  await page.locator("#aAdd").click();
+  await expect(page.locator("#aHelp")).toContainText("no free shop floor");
+  await page.locator("#aChips button", { hasText: "Books" }).click();
+  await page.locator("#aDel").click();
+  await expect(page.locator("#aChips button")).toHaveCount(1);
+  await page.locator("#aAdd").click();
+  await expect(page.locator("#aChips button")).toHaveCount(2);
+  await page.locator("#aName").fill("Kids corner");
+  await page.locator("#aName").press("Enter");
+  await page.locator("#aFinish").selectOption("rug");
+  await expect(page.locator("#aChips")).toContainText("Kids corner");
+  await page.locator("#reDone").click();
+  expect(errors, errors.join("\n")).toEqual([]);
+});

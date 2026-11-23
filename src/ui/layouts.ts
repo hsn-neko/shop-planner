@@ -4,7 +4,7 @@ import { $, $$, $in, clone, esc, fmt, isDesk, isWide } from "../dom";
 import { rebuildItems, select, updateEmpty } from "../items";
 import { fitPlan } from "../plan/plan";
 import { buildRoom } from "../roomView";
-import { roomName, SHOP_TYPES, TYPE_ORDER, typeOf } from "../data/shopTypes";
+import { KIND_ORDER, roomName, SHOP_TYPES, TYPE_ORDER, typeOf } from "../data/shopTypes";
 import { app, countsLabel, pushUndo, save, seatsOf, withIds } from "../state";
 import type { Layout, ShopType } from "../types";
 import { applyLight, fitView, setMode } from "../views";
@@ -17,7 +17,7 @@ import { setTab } from "./tabs";
 
 /** All palettes, this layout's type first, each type under its own small heading. */
 export function renderPalettes(): void {
-  const own = typeOf(app.L), order = [own, ...TYPE_ORDER.filter((t) => t !== own)];
+  const own = typeOf(app.L), order = [...KIND_ORDER.filter((t) => t === own), ...KIND_ORDER.filter((t) => t !== own)];
   const btn = ([k, p]: [string, (typeof PALETTES)[string]]) =>
     `<button data-pal="${k}" aria-pressed="${k === app.L.palette}"><div class="sw"><i style="background:${p.f1}"></i><i style="background:${p.wall}"></i><i style="background:${p.accent}"></i><i style="background:${p.wood}"></i></div>${p.name}<small>${p.note}</small></button>`;
   $("#pal").innerHTML = order.map((t) => `<div class="palgrp">${SHOP_TYPES[t].name}</div>` + Object.entries(PALETTES).filter(([, p]) => p.kind === t).map(btn).join("")).join("");

@@ -25,7 +25,10 @@ export function itemHeight(i: Placed, cat: Lookup): number {
 export function findClashes(items: Placed[], geo: Geo, cat: Lookup): Set<number> {
   const bad = new Set<number>(), e = 0.01;
   const fp = items.map((i) => ({ i, ...footprint(i, cat) }));
-  for (const a of fp) if (!geo.rectIn(a.i.x - a.hw + e, a.i.x + a.hw - e, a.i.z - a.hd + e, a.i.z + a.hd - e)) bad.add(a.i.id);
+  for (const a of fp) {
+    const x0 = a.i.x - a.hw + e, x1 = a.i.x + a.hw - e, z0 = a.i.z - a.hd + e, z1 = a.i.z + a.hd - e;
+    if (!geo.rectIn(x0, x1, z0, z1) || geo.dividers.some((d) => x0 < d.x1 && d.x0 < x1 && z0 < d.z1 && d.z0 < z1)) bad.add(a.i.id);
+  }
   for (let x = 0; x < fp.length; x++)
     for (let y = x + 1; y < fp.length; y++) {
       const a = fp[x]!, b = fp[y]!;
