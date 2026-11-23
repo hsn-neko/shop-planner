@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Weekly, so a browser update or a newly broken dependency shows up even when the code hasn't changed.
+  schedule:
+    - cron: "17 5 * * 1"
 
 permissions:
   contents: read
@@ -20,11 +23,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Fails on known high or critical vulnerabilities in any dependency.
+      - run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npm run test:unit
       - run: npm run build
@@ -39,6 +46,8 @@ jobs:
         browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
@@ -64,7 +73,8 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     needs: [checks, test]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    # Only pushes to main (and manual runs) deploy; pull requests and the weekly run don't.
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -77,6 +87,8 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
@@ -93,3 +105,25 @@ jobs:
           include-hidden-files: true
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  live:
+    name: Check the live site
+    needs: [deploy]
+    # After a deploy, and in the weekly run (where deploy is skipped): the published site must keep its
+    # Content Security Policy and load nothing from other sites.
+    if: always() && (needs.deploy.result == 'success' || (github.event_name == 'schedule' && needs.deploy.result == 'skipped'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run live checks
+        env:
+          LIVE_URL: https://hsn-neko.github.io/shop-planner/
+        run: npx playwright test --config playwright.live.config.ts

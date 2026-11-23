@@ -1,0 +1,29 @@
+# Weekly update pull requests for npm packages and for the pinned GitHub Actions.
+# Each one runs the full CI and security scans before it can be merged.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Wait a week after a release before proposing it, so a hijacked release is usually caught and pulled first.
+    cooldown:
+      default-days: 7
+    groups:
+      three:
+        patterns: ["three", "@types/three"]
+      tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
