@@ -232,7 +232,7 @@ function renderStudioForm(): void {
     ${srow("sSeats", "Seats it adds", 0, 10, 1, s.seats, "")}
     <div class="label" style="margin-top:12px;display:flex;justify-content:space-between"><span>Parts (${s.parts.length})</span></div>`;
     h += s.parts.map((q, i) => i !== s.sel
-      ? `<button class="part" data-psel="${i}"><i class="dot" style="background:${q.color}"></i><b>Part ${i + 1}</b><span>${q.k === "cyl" ? "Cylinder" : "Box"} · ${fmt(q.w)} × ${fmt(q.d)} × ${fmt(q.h)} m</span></button>`
+      ? `<button class="part" data-psel="${i}"><i class="dot" style="background:${esc(q.color)}"></i><b>Part ${i + 1}</b><span>${q.k === "cyl" ? "Cylinder" : "Box"} · ${fmt(q.w)} × ${fmt(q.d)} × ${fmt(q.h)} m</span></button>`
       : `<div class="part sel"><div class="phead"><b>Part ${i + 1}</b><div class="chooser two" id="pKind"><button data-k="box" aria-pressed="${q.k === "box"}">Box</button><button data-k="cyl" aria-pressed="${q.k === "cyl"}">Cylinder</button></div></div>
       ${srow("pW", q.k === "cyl" ? "Diameter X" : "Width", 0.02, 3, 0.01, q.w)}${srow("pD", q.k === "cyl" ? "Diameter Z" : "Depth", 0.02, 3, 0.01, q.d)}${srow("pH", "Height", 0.01, 2.6, 0.01, q.h)}
       ${srow("pX", "Left / right", -2, 2, 0.01, q.x)}${srow("pZ", "Back / front", -2, 2, 0.01, q.z)}${srow("pY", "Lift", 0, 2.6, 0.01, q.y)}

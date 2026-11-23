@@ -34,7 +34,7 @@ export function buildItem(i: Placed): void {
   const p = col ? { ...base, accent: col, up: col } : base;
   const g = new THREE.Group() as ItemMesh, body = new THREE.Group();
   g.add(body);
-  const build = BUILD[i.type];
+  const build = Object.hasOwn(BUILD, i.type) ? BUILD[i.type] : undefined;
   if (build) build(body, p);
   else buildCustom(body, p, c);
   body.scale.set(i.sx || 1, i.sy || 1, i.sz || 1);

@@ -18,9 +18,9 @@ export function openInv(on: boolean): void {
 function symSVG(c: ItemDef): string {
   const col = c.color || c.col || (c.type === "plant" ? "#6f9a5a" : "var(--accent)"), sw = 'stroke="currentColor" stroke-width="1.3"';
   if (c.seats || c.shape === "round" || c.shape === "square")
-    return `<svg class="sym" viewBox="0 0 20 20" fill="none"><rect x="2" y="7" width="4" height="6" rx="1" fill="${col}" ${sw}/><rect x="14" y="7" width="4" height="6" rx="1" fill="${col}" ${sw}/><circle cx="10" cy="10" r="3.5" ${sw}/></svg>`;
-  if (c.type === "plant") return `<svg class="sym" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="${col}" stroke="currentColor" stroke-width="1.3"/></svg>`;
-  return `<svg class="sym" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="8" rx="1.5" fill="${col}" fill-opacity=".55" ${sw}/>${c.front ? '<path d="M3 14h14" stroke="currentColor" stroke-width="2.6"/>' : ""}</svg>`;
+    return `<svg class="sym" viewBox="0 0 20 20" fill="none"><rect x="2" y="7" width="4" height="6" rx="1" fill="${esc(col)}" ${sw}/><rect x="14" y="7" width="4" height="6" rx="1" fill="${esc(col)}" ${sw}/><circle cx="10" cy="10" r="3.5" ${sw}/></svg>`;
+  if (c.type === "plant") return `<svg class="sym" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="${esc(col)}" stroke="currentColor" stroke-width="1.3"/></svg>`;
+  return `<svg class="sym" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="8" rx="1.5" fill="${esc(col)}" fill-opacity=".55" ${sw}/>${c.front ? '<path d="M3 14h14" stroke="currentColor" stroke-width="2.6"/>' : ""}</svg>`;
 }
 
 const OWN = "Your items";
@@ -29,8 +29,8 @@ let armed: string | null = null;
 const opened = new Set<ShopType>();
 
 function row(c: ItemDef): string {
-  return `<div class="irow">${symSVG(c)}<div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="meta">${fmt(c.w)} × ${fmt(c.d)} m${c.seats ? ` · ${c.seats} seats` : ""}${c.fix ? " · display fixture" : ""}${c.shelf ? ` · ${fmt(c.shelf * c.w)} m shelving` : ""}</div>${c.grp === OWN ? `<button class="rm" data-edit="${c.type}">Edit in studio</button> · <button class="rm${armed === c.type ? " armed" : ""}" data-rm="${c.type}">${armed === c.type ? "Tap again to remove everywhere" : "Remove"}</button>` : ""}</div>
-     <button class="cnt" data-find="${c.type}" aria-label="Find placed ${esc(c.name)}">×0</button><button class="add" data-add="${c.type}" aria-label="Add ${esc(c.name)}">+</button></div>`;
+  return `<div class="irow">${symSVG(c)}<div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="meta">${fmt(c.w)} × ${fmt(c.d)} m${c.seats ? ` · ${c.seats} seats` : ""}${c.fix ? " · display fixture" : ""}${c.shelf ? ` · ${fmt(c.shelf * c.w)} m shelving` : ""}</div>${c.grp === OWN ? `<button class="rm" data-edit="${esc(c.type)}">Edit in studio</button> · <button class="rm${armed === c.type ? " armed" : ""}" data-rm="${esc(c.type)}">${armed === c.type ? "Tap again to remove everywhere" : "Remove"}</button>` : ""}</div>
+     <button class="cnt" data-find="${esc(c.type)}" aria-label="Find placed ${esc(c.name)}">×0</button><button class="add" data-add="${esc(c.type)}" aria-label="Add ${esc(c.name)}">+</button></div>`;
 }
 function groups(list: ItemDef[]): string {
   const names = [...new Set(list.map((c) => c.grp ?? ""))];
@@ -90,7 +90,7 @@ export function renderCatalog(): void {
 }
 
 export function updateCounts(): void {
-  const n: Record<string, number> = {}, g: Record<string, number> = {}, f: Record<string, number> = {};
+  const n: Record<string, number> = Object.create(null) as Record<string, number>, g: Record<string, number> = {}, f: Record<string, number> = {};
   for (const i of app.L.items) {
     n[i.type] = (n[i.type] ?? 0) + 1;
     const c = BY[i.type], grp = c ? (c.grp ?? "") : OWN;

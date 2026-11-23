@@ -87,7 +87,8 @@ export const CAT: ItemDef[] = [
   { type: "plant", h: 1.07, name: "Potted plant", grp: "Details", w: 0.5, d: 0.5, seats: 0 },
   { type: "menu", h: 1.25, name: "Sign board", grp: "Details", w: 0.7, d: 0.5, seats: 0 },
 ];
-export const BY: Record<string, ItemDef> = Object.fromEntries(CAT.map((c) => [c.type, c]));
+/** Built-in pieces by type. No prototype, so a saved type such as "toString" finds nothing. */
+export const BY: Record<string, ItemDef> = Object.assign(Object.create(null) as Record<string, ItemDef>, Object.fromEntries(CAT.map((c) => [c.type, c])));
 
 /* ---------- Starter layouts ---------- */
 const it = (type: string, x: number, z: number, r = 0): Placed => ({ id: 0, type, x, z, r });

@@ -182,7 +182,7 @@ const sameName = (a: Area) => areas().filter((o) => o.name.trim().toLowerCase() 
 
 export function renderAreaPanel(): void {
   const list = areas();
-  $("#aChips").innerHTML = list.map((a) => `<button data-asel="${a.id}" aria-pressed="${a.id === sel}">${esc(a.name || "Area")}</button>`).join("");
+  $("#aChips").innerHTML = list.map((a) => `<button data-asel="${esc(a.id)}" aria-pressed="${a.id === sel}">${esc(a.name || "Area")}</button>`).join("");
   for (const b of $$<HTMLButtonElement>("[data-asel]")) b.onclick = () => selectArea(b.dataset.asel === sel ? null : b.dataset.asel!);
   const a = find(sel);
   $("#aPanel").hidden = !a;

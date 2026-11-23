@@ -1,9 +1,10 @@
 // Colour swatch rows used by the item editor and the item studio.
 import { SWATCHES } from "../data/catalog";
+import { esc } from "../dom";
 
 export function swatchHTML(cur: string | null | undefined, withReset = false): string {
   return SWATCHES.map((c) => `<button data-c="${c}" aria-pressed="${c === cur}" style="background:${c}" aria-label="Colour ${c}"></button>`).join("")
-    + `<input type="color" aria-label="Pick any colour" value="${cur || "#c2416b"}">`
+    + `<input type="color" aria-label="Pick any colour" value="${esc(cur || "#c2416b")}">`
     + (withReset ? `<button class="btn" data-c="" style="width:auto;height:36px;min-height:36px;border-radius:10px;box-shadow:none">Palette colour</button>` : "");
 }
 
